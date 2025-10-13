@@ -15,7 +15,7 @@
 const Bool_t QwMollerADC_Channel::kDEBUG = kFALSE;
 
 const Int_t  QwMollerADC_Channel::kWordsPerChannel = 30;
-const Int_t  QwMollerADC_Channel::kMaxChannels     = 8;
+const Int_t  QwMollerADC_Channel::kMaxChannels     = 16;
 
 const Double_t QwMollerADC_Channel::kTimePerSample = (2.0/30.0) * Qw::us; //2.0 originally
 
