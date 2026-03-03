@@ -20,8 +20,9 @@
 
 const Bool_t QwMollerADC_Channel::kDEBUG = kFALSE;
 
-const Int_t  QwMollerADC_Channel::kWordsPerChannel = 30;
-const Int_t  QwMollerADC_Channel::kMaxChannels     = 8;
+const Int_t  QwMollerADC_Channel::kWordsPerChannel = 14;
+const Int_t  QwMollerADC_Channel::kMaxChannels     = 16;
+const Int_t  QwMollerADC_Channel::kModuleHeaderWords = 8;
 
 const Double_t QwMollerADC_Channel::kTimePerSample = (2.0/30.0) * Qw::us; //2.0 originally
 
@@ -53,7 +54,8 @@ Int_t QwMollerADC_Channel::GetBufferOffset(Int_t moduleindex, Int_t channelindex
               << ".  Must be in range [0," << kMaxChannels << "]."
               << QwLog::endl;
     } else {
-      offset = ( (moduleindex * kMaxChannels) + channelindex )
+      offset = kModuleHeaderWords + 
+        ( (moduleindex * kMaxChannels) + channelindex )
         * kWordsPerChannel;
     }
     return offset;
@@ -162,16 +164,18 @@ void QwMollerADC_Channel::InitializeChannel(TString name, TString datatosave)
 {
   SetElementName(name);
   SetDataToSave(datatosave);
-  SetNumberOfDataWords(6);
-  SetNumberOfSubElements(5);
-
+  SetNumberOfDataWords(kWordsPerChannel);
+  SetNumberOfSubElements(kMaxBlock+1); 
+  
   kFoundPedestal = 0;
   kFoundGain = 0;
 
   fPedestal            = 0.0;
   fCalibrationFactor   = 1.0;
 
-  fBlocksPerEvent      = 4;
+  fBlocksPerEvent      = kMaxBlock;
+  
+
 
   fTreeArrayIndex      = 0;
   fTreeArrayNumEntries = 0;
@@ -439,62 +443,170 @@ void QwMollerADC_Channel::EncodeEventData(std::vector<UInt_t> &buffer)
                 | (fSequenceNumber  << 8  & 0x0000FF00);
 
     for (Int_t i = 0; i < kWordsPerChannel; i++){
-        buffer.push_back(localbuf[i]);
-    }
+        buffer.push_back(localbuf[i]);  
+      }
   }
+  return;
 }
 
 
-
-Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer, UInt_t num_words_left, UInt_t index)
+Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
+                                           UInt_t  num_words_left,
+                                           UInt_t  index)
 {
-  UInt_t words_read = 0;
-  UInt_t localbuf[kWordsPerChannel] = {0};
-  // The conversion from UInt_t to Double_t discards the sign, so we need an intermediate
-  // static_cast from UInt_t to Int_t.
-  Int_t localbuf_signed[kWordsPerChannel] = {0};
+  // small debug counter 
+  static int debug_event_counter = 0;
 
-  if (IsNameEmpty()){
-    //  This channel is not used, but is present in the data stream.
-    //  Skip over this data.
-    words_read = fNumberOfDataWords;
-  } else if (num_words_left >= fNumberOfDataWords)
-    {
-      for (Int_t i=0; i<kWordsPerChannel; i++){
-        localbuf[i] = buffer[i];
-        localbuf_signed[i] = static_cast<Int_t>(localbuf[i]);
-      }
+  // Each channel now has 7×64-bit words = 14×32-bit words
+  const UInt_t need_u32 = kWordsPerChannel; // = 14
 
-      fSoftwareBlockSum_raw = 0;
-      for (Int_t i=0; i<fBlocksPerEvent; i++){
-        fBlock_raw[i] = localbuf_signed[i*5];
-        fBlockSumSq_raw[i] = localbuf_signed[i*5+1];
-        fBlockSumSq_raw[i] += Long64_t (localbuf_signed[i*5+2]) << 32;
-        fBlock_min[i] = localbuf_signed[i*5+3];
-        fBlock_max[i] = localbuf_signed[i*5+4];
-        fSoftwareBlockSum_raw += fBlock_raw[i];
-      }
-      fHardwareBlockSum_raw = localbuf_signed[20];
+  // If this channel slot is unused, just skip the words
+  if (IsNameEmpty()) {
+    return need_u32;
+  }
 
-      /*  Permanent change in the structure of the 6th word of the ADC readout.
-       *  The upper 16 bits are the number of samples, and the upper 8 of the
-       *  lower 16 are the sequence number.  This matches the structure of
-       *  the ADC readout in block read mode, and now also in register read mode.
-       *  P.King, 2007sep04.
-       */
-      fSequenceNumber   = (localbuf[25]>>8)  & 0xFF;
-      fNumberOfSamples  = (localbuf[25]>>16) & 0xFFFF;
+  // Basic safety check
+  if (num_words_left < need_u32) {
+    std::cerr
+      << "QwMollerADC_Channel::ProcessEvBuffer: Not enough words for "
+      << "MOLLER ADC integrating mode channel (need "
+      << need_u32 << ", have " << num_words_left << ")!\n";
+    return 0;
+  }
 
-      words_read = fNumberOfDataWords;
+  // ---------- Helpers for endian and packing ----------
 
-    } else
-      {
-        std::cerr << "QwMollerADC_Channel::ProcessEvBuffer: Not enough words!"
-                  << std::endl;
-      }
-  return words_read;
+  auto bswap64 = [](uint64_t x)->uint64_t {
+#if defined(__has_builtin)
+#  if __has_builtin(__builtin_bswap64)
+    return __builtin_bswap64(x);
+#  else
+    return ((x & 0x00000000000000FFULL) << 56) |
+           ((x & 0x000000000000FF00ULL) << 40) |
+           ((x & 0x0000000000FF0000ULL) << 24) |
+           ((x & 0x00000000FF000000ULL) <<  8) |
+           ((x & 0x000000FF00000000ULL) >>  8) |
+           ((x & 0x0000FF0000000000ULL) >> 24) |
+           ((x & 0x00FF000000000000ULL) >> 40) |
+           ((x & 0xFF00000000000000ULL) >> 56);
+#  endif
+#else
+    return ((x & 0x00000000000000FFULL) << 56) |
+           ((x & 0x000000000000FF00ULL) << 40) |
+           ((x & 0x0000000000FF0000ULL) << 24) |
+           ((x & 0x00000000FF000000ULL) <<  8) |
+           ((x & 0x000000FF00000000ULL) >>  8) |
+           ((x & 0x0000FF0000000000ULL) >> 24) |
+           ((x & 0x00FF000000000000ULL) >> 40) |
+           ((x & 0xFF00000000000000ULL) >> 56);
+#endif
+  };
+
+  // CODA packs each 64-bit word as big-endian into two 32-bit words:
+  // p[1] = high 32 bits, p[0] = low 32 bits
+  auto read_be64_from_u32 = [&](UInt_t* p)->uint64_t {
+    uint64_t hi  = static_cast<uint64_t>(p[1]);
+    uint64_t lo  = static_cast<uint64_t>(p[0]);
+    uint64_t be64  = (hi << 32) | lo;    // big-endian 64-bit
+    return be64;     
+  };
+
+  UInt_t* p = buffer;
+
+  // ---------- 7 × 64-bit channel words (already at channel offset) ----------
+  // Naming follows the MOLLER ADC manual (integrating mode)
+  uint64_t ch_misc              = read_be64_from_u32(p +  0);
+  uint64_t ch_sample_count_win  = read_be64_from_u32(p +  2);
+  uint64_t ch_sum_win           = read_be64_from_u32(p +  4);
+  uint64_t ch_sumsq_win         = read_be64_from_u32(p +  6);
+  uint64_t ch_sample_count_block  = read_be64_from_u32(p +  8);
+  uint64_t ch_sum_block           = read_be64_from_u32(p + 10);
+  uint64_t ch_sumsq_block         = read_be64_from_u32(p + 12);
+
+//int blockindex = static_cast<int>(ch_sample_count_win / ch_sample_count_block) - 1;
+int blockindex = static_cast<int>(std::round(static_cast<double>(ch_sample_count_win) / ch_sample_count_block) - 1.0);
+
+  // ---------- Optional debug print for a few events ----------
+  if (debug_event_counter < 5) {
+    std::cout << "\n=== MOLLER ADC Channel Debug Event "
+            << debug_event_counter << " ===\n";
+
+  std::cout << "ch_misc              = 0x"
+            << std::hex << ch_misc << "\n";
+  std::cout << "blockindex = " << blockindex << "\n";
+  std::cout << "ch_sample_count_win  = 0x" << ch_sample_count_win << "\n";
+  std::cout << "ch_sum_win           = 0x" << ch_sum_win << "\n";
+  std::cout << "ch_sumsq_win         = 0x" << ch_sumsq_win << "\n";
+  std::cout << "ch_sample_count_block      = 0x" << ch_sample_count_block << "\n";
+  std::cout << "ch_sum_block               = 0x" << ch_sum_block << "\n";
+  std::cout << "ch_sumsq_block             = 0x" << ch_sumsq_block << std::dec << "\n";
+
+  std::cout << "---------------------------------------\n";
+  }
+
+  // ---------- Decode 20-bit signed min/max from ch_misc ----------
+  //   [39:20] = max (signed 20-bit)
+  //   [19:0]  = min (signed 20-bit)
+  auto sign_extend20 = [](int32_t v20)->int32_t {
+    v20 &= 0xFFFFF;          // keep lower 20 bits
+    if (v20 & 0x80000) {     // if sign bit set
+      v20 |= ~0xFFFFF;       // extend sign to 32 bits
+    }
+    return v20;
+  };
+
+  int32_t ch_max_20 = sign_extend20(
+                        static_cast<int32_t>((ch_misc >> 20) & 0xFFFFF));
+  int32_t ch_min_20 = sign_extend20(
+                        static_cast<int32_t>( ch_misc        & 0xFFFFF));
+
+
+  fNumberOfSamples      = static_cast<UInt_t>(ch_sample_count_win);
+  fHardwareBlockSum_raw = static_cast<Int_t>(
+                            static_cast<int64_t>(ch_sum_win));
+  
+if (ch_sample_count_block == 0) {
+  std::cerr << "QwMollerADC_Channel::ProcessEvBuffer: "
+            << "ch_sample_count_block == 0, cannot compute blockindex!\n";
+  return need_u32;
 }
 
+
+
+if (blockindex < 0 || blockindex >= kMaxBlock) {
+  std::cerr << "QwMollerADC_Channel::ProcessEvBuffer: "
+            << "Computed bad blockindex = " << blockindex
+            << " (kMaxBlock = " << kMaxBlock << ")\n";
+  return need_u32;
+}
+// Debug print: show which block index is being filled
+if (debug_event_counter < 10) {   
+  std::cout << "[DEBUG] Filling blockindex = " << blockindex
+            << "  (win_count=" << ch_sample_count_win
+            << ", block_count=" << ch_sample_count_block << ")\n";
+
+  std::cout << "         sum_block   = 0x" << std::hex << ch_sum_block << std::dec << "\n"
+            << "         sumsq_block = 0x" << std::hex << ch_sumsq_block << std::dec << "\n"
+            << "         min_20      = "   << ch_min_20 << "\n"
+            << "         max_20      = "   << ch_max_20 << "\n"
+            << "--------------------------------------------------------\n";
+}
+//  Figure out which subblock we're reading
+
+  if (blockindex==0){
+    fSoftwareBlockSum_raw  = ch_sum_block;
+  } else {
+    fSoftwareBlockSum_raw  += ch_sum_block;
+  }
+  fBlock_raw[blockindex]         = static_cast<Int_t>(ch_sum_block);
+  fBlockSumSq_raw[blockindex]    = static_cast<Long64_t>(ch_sumsq_block);
+  fBlock_min[blockindex]         = ch_min_20;
+  fBlock_max[blockindex]         = ch_max_20;
+
+  debug_event_counter++;
+
+  return need_u32;
+}
 
 
 void QwMollerADC_Channel::ProcessEvent()
@@ -533,6 +645,7 @@ void QwMollerADC_Channel::ProcessEvent()
   }
   return;
 }
+
 
 Double_t QwMollerADC_Channel::GetAverageVolts() const
 {
@@ -588,7 +701,7 @@ void  QwMollerADC_Channel::ConstructHistograms(TDirectory *folder, TString &pref
 
     if(fDataToSave==kRaw)
       {
-        fHistograms.resize(8+2+1, NULL);
+        fHistograms.resize(2*kMaxBlock+2+1, NULL);
         size_t index=0;
         for (Int_t i=0; i<fBlocksPerEvent; i++){
           fHistograms[index]   = gQwHists.Construct1DHist(basename+Form("_block%d_raw",i));
@@ -602,7 +715,7 @@ void  QwMollerADC_Channel::ConstructHistograms(TDirectory *folder, TString &pref
       }
     else if(fDataToSave==kDerived)
       {
-        fHistograms.resize(4+1+1, NULL);
+        fHistograms.resize(kMaxBlock+1+1, NULL);
         Int_t index=0;
         for (Int_t i=0; i<fBlocksPerEvent; i++){
           fHistograms[index] = gQwHists.Construct1DHist(basename+Form("_block%d",i));
@@ -709,10 +822,9 @@ void  QwMollerADC_Channel::ConstructBranchAndVector(TTree *tree, TString &prefix
   }
 
   if (bBlock) {
-    values.push_back("block0", 'D');
-    values.push_back("block1", 'D');
-    values.push_back("block2", 'D');
-    values.push_back("block3", 'D');
+    for (int i = 0; i < kMaxBlock; i++) {
+      values.push_back(Form("block%d",i), 'D');
+    }
   }
 
   if (bNum_samples) {
@@ -728,19 +840,19 @@ void  QwMollerADC_Channel::ConstructBranchAndVector(TTree *tree, TString &prefix
       values.push_back("hw_sum_raw", 'I');
     }
     if (bBlock_raw) {
-      values.push_back("block0_raw", 'I');
-      values.push_back("block1_raw", 'I');
-      values.push_back("block2_raw", 'I');
-      values.push_back("block3_raw", 'I');
+	for (int i = 0; i < kMaxBlock; i++) {
+      values.push_back(Form("block%d_raw",i), 'I');
+	}
+     
     }
 
-    for (int i = 0; i < 4; i++) {
       if (bBlock_raw) {
+	 for (int i = 0; i < kMaxBlock; i++) {
         values.push_back(Form("SumSq_%d", i), 'L');
         values.push_back(Form("RawMin_%d", i), 'I');
         values.push_back(Form("RawMax_%d", i), 'I');
+      	}
       }
-    }
 
     if (bSequence_number) {
       values.push_back("sequence_number", 'i');
@@ -843,7 +955,7 @@ void  QwMollerADC_Channel::FillTreeVector(QwRootTreeBranchVector& values) const
         }
 
         if (bBlock_raw) {
-          for (int i = 0; i < 4; i++) {
+          for (int i = 0; i < kMaxBlock; i++) {
             values.SetValue(index++, fBlockSumSq_raw[i]);
             values.SetValue(index++, fBlock_min[i]);
             values.SetValue(index++, fBlock_max[i]);
@@ -943,7 +1055,7 @@ void  QwMollerADC_Channel::ConstructNTupleAndVector(std::unique_ptr<ROOT::RNTupl
     if (fDataToSave == kRaw) {
       if (bHw_sum_raw) numElements += 1; // hw_sum_raw
       if (bBlock_raw) numElements += fBlocksPerEvent; // block_raw
-      numElements += 16; // fBlockSumSq_raw (4*4)
+      numElements += 4*kMaxBlock; // fBlockSumSq_raw (4*kMaxBlock)
       if (bSequence_number) numElements += 1; // sequence_number
     }
 
@@ -986,7 +1098,7 @@ void  QwMollerADC_Channel::ConstructNTupleAndVector(std::unique_ptr<ROOT::RNTupl
         }
       }
 
-      for(int i = 0; i < 4; i++){
+      for(int i = 0; i < kMaxBlock; i++){
         fieldPtrs.push_back(model->MakeField<Double_t>((basename + Form("_sumsq%d_low", i)).Data()));
         fieldPtrs.push_back(model->MakeField<Double_t>((basename + Form("_sumsq%d_high", i)).Data()));
         fieldPtrs.push_back(model->MakeField<Double_t>((basename + Form("_min%d", i)).Data()));
@@ -1061,7 +1173,7 @@ void  QwMollerADC_Channel::FillNTupleVector(std::vector<Double_t>& values) const
           }
         }
 
-        for(int i = 0; i < 4; i++){
+        for(int i = 0; i < kMaxBlock; i++){
         values[index++] = fBlockSumSq_raw[i] & 0xffffffff;
         values[index++] = fBlockSumSq_raw[i] >> 32;
         values[index++] = fBlock_min[i];
@@ -1357,7 +1469,7 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator/= (const QwMollerADC_Channel 
     //
     // This requires that both the numerator and denominator are non-zero!
     //
-    for (Int_t i = 0; i < 4; i++) {
+    for (Int_t i = 0; i < kMaxBlock; i++) {
       if (this->fBlock[i] != 0.0 && denom.fBlock[i] != 0.0){
         ratio    = (this->fBlock[i]) / (denom.fBlock[i]);
         variance =  ratio * ratio *
@@ -1592,7 +1704,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
       fHardwareBlockSumM2 -= (M12 - M11)
         * (M12 - fHardwareBlockSum); // note: using updated mean
       // and for individual blocks
-      for (Int_t i = 0; i < 4; i++) {
+      for (Int_t i = 0; i < kMaxBlock; i++) {
         M11 = fBlock[i];
         M12 = value.fBlock[i];
         M22 = value.fBlockM2[i];
@@ -1606,7 +1718,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
       if (fabs(fHardwareBlockSumM2) < 10.*std::numeric_limits<double>::epsilon())
         fHardwareBlockSumM2 = 0; // rounding
       // and for individual blocks
-      for (Int_t i = 0; i < 4; i++) {
+      for (Int_t i = 0; i < kMaxBlock; i++) {
         M11 = fBlock[i];
         M12 = value.fBlock[i];
         M22 = value.fBlockM2[i];
@@ -1623,7 +1735,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
       if (fabs(fHardwareBlockSumM2) < 10.*std::numeric_limits<double>::epsilon())
         fHardwareBlockSumM2 = 0; // rounding
       // and for individual blocks
-      for (Int_t i = 0; i < 4; i++) {
+      for (Int_t i = 0; i < kMaxBlock; i++) {
         M11 = fBlock[i];
         M12 = value.fBlock[i];
         M22 = value.fBlockM2[i];
@@ -1644,7 +1756,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
     fHardwareBlockSumM2 += (M12 - M11)
          * (M12 - fHardwareBlockSum); // note: using updated mean
     // and for individual blocks
-    for (Int_t i = 0; i < 4; i++) {
+    for (Int_t i = 0; i < kMaxBlock; i++) {
       M11 = fBlock[i];
       M12 = value.fBlock[i];
       M22 = value.fBlockM2[i];
@@ -1657,7 +1769,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
     fHardwareBlockSum += n2 * (M12 - M11) / n;
     fHardwareBlockSumM2 += M22 + n1 * n2 * (M12 - M11) * (M12 - M11) / n;
     // and for individual blocks
-    for (Int_t i = 0; i < 4; i++) {
+    for (Int_t i = 0; i < kMaxBlock; i++) {
       M11 = fBlock[i];
       M12 = value.fBlock[i];
       M22 = value.fBlockM2[i];

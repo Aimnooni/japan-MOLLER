@@ -318,6 +318,8 @@ private:
   static const Bool_t kDEBUG;
   static const Int_t  kWordsPerChannel; //no.of words per channel in the CODA buffer
   static const Int_t  kMaxChannels;     //no.of channels per module
+  static const Int_t  kModuleHeaderWords;     //no.of words per header
+  static constexpr Int_t kMaxBlock=5; // maximum no.of blocks
 
   /*! \name ADC Calibration                    */
   // @{
@@ -337,18 +339,19 @@ private:
 
   /*! \name Event data members---Raw values */
   // @{
-  Int_t fBlock_raw[4];      ///< Array of the sub-block data as read from the module
+  Int_t fBlock_raw[kMaxBlock];      ///< Array of the sub-block data as read from the module
   Int_t fHardwareBlockSum_raw; ///< Module-based sum of the four sub-blocks as read from the module
   Int_t fSoftwareBlockSum_raw; ///< Sum of the data in the four sub-blocks raw
-  Long64_t fBlockSumSq_raw[5];
-  Int_t fBlock_min[5];
-  Int_t fBlock_max[5];
+  Long64_t fBlockSumSq_raw[kMaxBlock+1]; 
+  Int_t fBlock_min[kMaxBlock+1];
+  Int_t fBlock_max[kMaxBlock+1];
+  Short_t fBlock_numSamples[kMaxBlock+1];
   // @}
 
   /*! \name Event data members---Potentially calibrated values*/
   // @{
   // The following values potentially have pedestal removed  and calibration applied
-  Double_t fBlock[4];          ///< Array of the sub-block data
+  Double_t fBlock[kMaxBlock];          ///< Array of the sub-block data
   Double_t fHardwareBlockSum;  ///< Module-based sum of the four sub-blocks
   // @}
 
@@ -356,8 +359,8 @@ private:
   /// \name Calculation of the statistical moments
   // @{
   // Moments of the separate blocks
-  Double_t fBlockM2[4];        ///< Second moment of the sub-block
-  Double_t fBlockError[4];     ///< Uncertainty on the sub-block
+  Double_t fBlockM2[kMaxBlock];        ///< Second moment of the sub-block
+  Double_t fBlockError[kMaxBlock];     ///< Uncertainty on the sub-block
   // Moments of the hardware sum
   Double_t fHardwareBlockSumM2;    ///< Second moment of the hardware sum
   Double_t fHardwareBlockSumError; ///< Uncertainty on the hardware sum
