@@ -320,7 +320,8 @@ private:
   static const Int_t  kMaxChannels;     //no.of channels per module
   static const Int_t  kModuleHeaderWords;     //no.of words per header
   static constexpr Int_t kMaxBlock=5; // maximum no.of blocks
-
+  
+  
   /*! \name ADC Calibration                    */
   // @{
   static const Double_t kMollerADC_VoltsPerBit;
@@ -346,6 +347,7 @@ private:
   Int_t fBlock_min[kMaxBlock+1];
   Int_t fBlock_max[kMaxBlock+1];
   Short_t fBlock_numSamples[kMaxBlock+1];
+  UInt_t fBlockSample[kMaxBlock+1]; // number of samples in each block
   // @}
 
   /*! \name Event data members---Potentially calibrated values*/
@@ -364,6 +366,13 @@ private:
   // Moments of the hardware sum
   Double_t fHardwareBlockSumM2;    ///< Second moment of the hardware sum
   Double_t fHardwareBlockSumError; ///< Uncertainty on the hardware sum
+  
+  Double_t fHardwareBlockSumRMS;   // RMS of the hardware sum
+  Double_t fBlockRMS[kMaxBlock+1]; // RMS of the sub-blocks
+
+  Double_t GetHardwareSumRMS() const { return fHardwareBlockSumRMS; } // RMS of the hardware sum
+  Double_t GetBlockRMS(Int_t i) const { return fBlockRMS[i]; }        // RMS of the sub-blocks
+  
   // @}
 
 

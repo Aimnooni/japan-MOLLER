@@ -8,6 +8,7 @@
 // System headers
 #include <stdexcept>
 #include "TMath.h"
+#include <cmath>
 
 // Qweak headers
 #include "QwLog.h"
@@ -259,12 +260,15 @@ void QwMollerADC_Channel::ClearEventData()
     fBlock[i] = 0.0;
     fBlockM2[i] = 0.0;
     fBlockError[i] = 0.0;
+    fBlockSample[i] = 0;
+    fBlockRMS[i] = 0.0;
   }
   fHardwareBlockSum_raw = 0;
   fSoftwareBlockSum_raw = 0;
   fHardwareBlockSum   = 0.0;
   fHardwareBlockSumM2 = 0.0;
   fHardwareBlockSumError = 0.0;
+  fHardwareBlockSumRMS = 0.0;
   fSequenceNumber   = 0;
   fNumberOfSamples  = 0;
   fGoodEventCount   = 0;
@@ -455,7 +459,7 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
                                            UInt_t  index)
 {
   // small debug counter 
-  static int debug_event_counter = 0;
+  //static int debug_event_counter = 0;
 
   // Each channel now has 7×64-bit words = 14×32-bit words
   const UInt_t need_u32 = kWordsPerChannel; // = 14
@@ -517,32 +521,30 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
   // Naming follows the MOLLER ADC manual (integrating mode)
   uint64_t ch_misc              = read_be64_from_u32(p +  0);
   uint64_t ch_sample_count_win  = read_be64_from_u32(p +  2);
-  uint64_t ch_sum_win           = read_be64_from_u32(p +  4);
+  int64_t ch_sum_win   = static_cast<int64_t>(read_be64_from_u32(p + 4));
   uint64_t ch_sumsq_win         = read_be64_from_u32(p +  6);
   uint64_t ch_sample_count_block  = read_be64_from_u32(p +  8);
-  uint64_t ch_sum_block           = read_be64_from_u32(p + 10);
+  int64_t ch_sum_block = static_cast<int64_t>(read_be64_from_u32(p + 10));
   uint64_t ch_sumsq_block         = read_be64_from_u32(p + 12);
 
 //int blockindex = static_cast<int>(ch_sample_count_win / ch_sample_count_block) - 1;
 int blockindex = static_cast<int>(std::round(static_cast<double>(ch_sample_count_win) / ch_sample_count_block) - 1.0);
 
-  // ---------- Optional debug print for a few events ----------
-  if (debug_event_counter < 5) {
-    std::cout << "\n=== MOLLER ADC Channel Debug Event "
-            << debug_event_counter << " ===\n";
+  //---------- Optional debug print for a few events ----------
+  //  if (debug_event_counter < 10) {
+  //   std::cout << "\n=== MOLLER ADC Channel Debug Event " << debug_event_counter << " ===\n";
+  //   std::cout << "   fBlockSample(before) = " << fBlockSample[blockindex] << "\n";
+  // std::cout << "ch_misc              = 0x" << std::hex << ch_misc << "\n";
+  //  std::cout << "blockindex(before) = " << blockindex << "\n";
+  // std::cout << "ch_sample_count_win  = 0x" << ch_sample_count_win << "\n";
+  // std::cout << "ch_sum_win           = 0x" << ch_sum_win << "\n";
+  // std::cout << "ch_sumsq_win         = 0x" << ch_sumsq_win << "\n";
+  // std::cout << "ch_sample_count_block      = 0x" << ch_sample_count_block << "\n";
+  // std::cout << "ch_sum_block               = 0x" << ch_sum_block << "\n";
+  // std::cout << "ch_sumsq_block             = 0x" << ch_sumsq_block << std::dec << "\n";
 
-  std::cout << "ch_misc              = 0x"
-            << std::hex << ch_misc << "\n";
-  std::cout << "blockindex = " << blockindex << "\n";
-  std::cout << "ch_sample_count_win  = 0x" << ch_sample_count_win << "\n";
-  std::cout << "ch_sum_win           = 0x" << ch_sum_win << "\n";
-  std::cout << "ch_sumsq_win         = 0x" << ch_sumsq_win << "\n";
-  std::cout << "ch_sample_count_block      = 0x" << ch_sample_count_block << "\n";
-  std::cout << "ch_sum_block               = 0x" << ch_sum_block << "\n";
-  std::cout << "ch_sumsq_block             = 0x" << ch_sumsq_block << std::dec << "\n";
-
-  std::cout << "---------------------------------------\n";
-  }
+  // std::cout << "---------------------------------------\n";
+  //  }
 
   // ---------- Decode 20-bit signed min/max from ch_misc ----------
   //   [39:20] = max (signed 20-bit)
@@ -562,8 +564,7 @@ int blockindex = static_cast<int>(std::round(static_cast<double>(ch_sample_count
 
 
   fNumberOfSamples      = static_cast<UInt_t>(ch_sample_count_win);
-  fHardwareBlockSum_raw = static_cast<Int_t>(
-                            static_cast<int64_t>(ch_sum_win));
+  fHardwareBlockSum_raw = static_cast<Long64_t>(ch_sum_win);
   
 if (ch_sample_count_block == 0) {
   std::cerr << "QwMollerADC_Channel::ProcessEvBuffer: "
@@ -580,30 +581,91 @@ if (blockindex < 0 || blockindex >= kMaxBlock) {
   return need_u32;
 }
 // Debug print: show which block index is being filled
-if (debug_event_counter < 10) {   
-  std::cout << "[DEBUG] Filling blockindex = " << blockindex
-            << "  (win_count=" << ch_sample_count_win
-            << ", block_count=" << ch_sample_count_block << ")\n";
+// if (debug_event_counter < 10) {   
+//   std::cout << "[DEBUG] Filling blockindex = " << blockindex
+//             << "  (win_count=" << ch_sample_count_win
+//             << ", block_count=" << ch_sample_count_block << ")\n";
 
-  std::cout << "         sum_block   = 0x" << std::hex << ch_sum_block << std::dec << "\n"
-            << "         sumsq_block = 0x" << std::hex << ch_sumsq_block << std::dec << "\n"
-            << "         min_20      = "   << ch_min_20 << "\n"
-            << "         max_20      = "   << ch_max_20 << "\n"
-            << "--------------------------------------------------------\n";
-}
+//   std::cout << "         sum_block   = 0x" << std::hex << ch_sum_block << std::dec << "\n"
+//             << "         sumsq_block = 0x" << std::hex << ch_sumsq_block << std::dec << "\n"
+//             << "         min_20      = "   << ch_min_20 << "\n"
+//             << "         max_20      = "   << ch_max_20 << "\n"
+//             << "--------------------------------------------------------\n";
+// }
 //  Figure out which subblock we're reading
 
-  if (blockindex==0){
-    fSoftwareBlockSum_raw  = ch_sum_block;
-  } else {
-    fSoftwareBlockSum_raw  += ch_sum_block;
-  }
-  fBlock_raw[blockindex]         = static_cast<Int_t>(ch_sum_block);
-  fBlockSumSq_raw[blockindex]    = static_cast<Long64_t>(ch_sumsq_block);
-  fBlock_min[blockindex]         = ch_min_20;
-  fBlock_max[blockindex]         = ch_max_20;
+  if (blockindex == 0) {
+  fSoftwareBlockSum_raw = static_cast<Int_t>(ch_sum_block);
+} else {
+  fSoftwareBlockSum_raw += static_cast<Int_t>(ch_sum_block);
+}
 
-  debug_event_counter++;
+fBlock_raw[blockindex]      = static_cast<Int_t>(ch_sum_block);
+fBlockSample[blockindex]    = static_cast<UInt_t>(ch_sample_count_block);
+fBlockSumSq_raw[blockindex] = static_cast<Long64_t>(ch_sumsq_block);
+fBlock_min[blockindex]      = ch_min_20;
+fBlock_max[blockindex]      = ch_max_20;
+
+long double win_mean = 0.0L;
+long double win_mean_sq = 0.0L;
+long double win_var = 0.0L;
+
+double block_mean = 0.0;
+double block_mean_sq = 0.0;
+double block_var = 0.0;
+
+// Window RMS
+if (ch_sample_count_win > 0) {
+  win_mean = static_cast<double>(ch_sum_win) / static_cast<double>(ch_sample_count_win);
+  win_mean_sq = static_cast<double>(ch_sumsq_win) / static_cast<double>(ch_sample_count_win);
+  win_var = win_mean_sq - win_mean * win_mean;
+  if (win_var < 0.0) win_var = 0.0;
+  fHardwareBlockSumRMS = std::sqrt(win_var);
+} else {
+  fHardwareBlockSumRMS = 0.0;
+}
+
+// Block RMS
+if (ch_sample_count_block > 0) {
+  block_mean = static_cast<double>(ch_sum_block) / static_cast<double>(ch_sample_count_block);
+  block_mean_sq = static_cast<double>(ch_sumsq_block) / static_cast<double>(ch_sample_count_block);
+  block_var = block_mean_sq - block_mean * block_mean;
+  if (block_var < 0.0) block_var = 0.0;
+  fBlockRMS[blockindex] = std::sqrt(block_var);
+} else {
+  fBlockRMS[blockindex] = 0.0;
+}
+
+// static int rms_debug_counter = 0;
+// if (rms_debug_counter < 10) {
+//   std::cout << "\n=== RMS DEBUG Event " << rms_debug_counter << " ===\n"
+//             << "ch_sample_count_win   = " << ch_sample_count_win << "\n"
+//             << "ch_sum_win            = " << ch_sum_win << "\n"
+//             << "ch_sumsq_win          = " << ch_sumsq_win << "\n"
+//             << "fHardwareBlockSumRMS  = " << fHardwareBlockSumRMS << "\n"
+//             << "blockindex            = " << blockindex << "\n"
+//             << "ch_sample_count_block = " << ch_sample_count_block << "\n"
+//             << "ch_sum_block          = " << ch_sum_block << "\n"
+//             << "ch_sumsq_block        = " << ch_sumsq_block << "\n"
+//             << "fBlockRMS[" << blockindex << "] = " << fBlockRMS[blockindex] << "\n";
+//   std::cout << std::setprecision(15)
+//           << "win_mean              = " << win_mean << "\n"
+//           << "win_mean_sq           = " << win_mean_sq << "\n"
+//           << "win_var               = " << win_var << "\n"
+//           << "block_mean            = " << block_mean << "\n"
+//           << "block_mean_sq         = " << block_mean_sq << "\n"
+//           << "block_var             = " << block_var << "\n";
+// }
+// rms_debug_counter++;
+
+
+//   if (debug_event_counter < 10) {
+//   std::cout << "   fBlockSample(after) = " << fBlockSample[blockindex] << "\n";
+//   std::cout << "blockindex(after) = " << blockindex << "\n";
+  
+// }
+
+//   debug_event_counter++;
 
   return need_u32;
 }
@@ -637,7 +699,7 @@ void QwMollerADC_Channel::ProcessEvent()
     fErrorFlag|=kErrorFlag_sample;
   } else {
     for (Int_t i = 0; i < fBlocksPerEvent; i++) {
-      fBlock[i] = fCalibrationFactor * ( (1.0 * fBlock_raw[i] * fBlocksPerEvent / fNumberOfSamples) - fPedestal );
+      fBlock[i] = fCalibrationFactor * ( (1.0 * fBlock_raw[i] / fBlockSample[i]) - fPedestal );
       fBlockM2[i] = 0.0; // second moment is zero for single events
     }
     fHardwareBlockSum = fCalibrationFactor * ( (1.0 * fHardwareBlockSum_raw / fNumberOfSamples) - fPedestal );
@@ -814,18 +876,20 @@ void  QwMollerADC_Channel::ConstructBranchAndVector(TTree *tree, TString &prefix
   bSequence_number = gQwHists.MatchVQWKElementFromList(GetSubsystemName().Data(), GetModuleType().Data(), "sequence_number");
 
   if (bHw_sum) {
-    values.push_back("hw_sum", 'D');
-    if (fDataToSave == kMoments) {
-      values.push_back("hw_sum_m2", 'D');
-      values.push_back("hw_sum_err", 'D');
-    }
+  values.push_back("hw_sum", 'D');
+  values.push_back("hw_sum_rms", 'D');
+  if (fDataToSave == kMoments) {
+    values.push_back("hw_sum_m2", 'D');
+    values.push_back("hw_sum_err", 'D');
   }
+}
 
   if (bBlock) {
-    for (int i = 0; i < kMaxBlock; i++) {
-      values.push_back(Form("block%d",i), 'D');
-    }
+  for (int i = 0; i < kMaxBlock; i++) {
+    values.push_back(Form("block%d", i), 'D');
+    values.push_back(Form("block%d_rms", i), 'D');
   }
+}
 
   if (bNum_samples) {
     values.push_back("num_samples", 'i');
@@ -920,19 +984,20 @@ void  QwMollerADC_Channel::FillTreeVector(QwRootTreeBranchVector& values) const
 
     // hw_sum
     if (bHw_sum) {
-      values.SetValue(index++, this->GetHardwareSum());
-      if (fDataToSave == kMoments) {
-        values.SetValue(index++, this->GetHardwareSumM2());
-        values.SetValue(index++, this->GetHardwareSumError());
-      }
-    }
+  values.SetValue(index++, this->GetHardwareSum());
+  values.SetValue(index++, this->GetHardwareSumRMS());
+  if (fDataToSave == kMoments) {
+    values.SetValue(index++, this->GetHardwareSumM2());
+    values.SetValue(index++, this->GetHardwareSumError());
+  }
+}
 
     if (bBlock) {
-      for (Int_t i = 0; i < fBlocksPerEvent; i++) {
-        // blocki
-        values.SetValue(index++, this->GetBlockValue(i));
-      }
-    }
+  for (Int_t i = 0; i < kMaxBlock; i++) {
+    values.SetValue(index++, this->GetBlockValue(i));
+    values.SetValue(index++, this->GetBlockRMS(i));
+  }
+}
 
     // num_samples
     if (bNum_samples)
@@ -966,6 +1031,13 @@ void  QwMollerADC_Channel::FillTreeVector(QwRootTreeBranchVector& values) const
           values.SetValue(index++, this->fSequenceNumber);
       }
   }
+  static int fill_debug_counter = 0;
+if (fill_debug_counter < 10) {
+  std::cout << "\n=== FILLTREE DEBUG Event " << fill_debug_counter << " ===\n"
+            << "GetHardwareSumRMS() = " << this->GetHardwareSumRMS() << "\n"
+            << "GetBlockRMS(0)      = " << this->GetBlockRMS(0) << std::endl;
+}
+fill_debug_counter++;
 }
 
 #ifdef HAS_RNTUPLE_SUPPORT
@@ -1196,10 +1268,12 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator= (const QwMollerADC_Channel &
     for (Int_t i=0; i<fBlocksPerEvent; i++){
       this->fBlock[i]     = value.fBlock[i];
       this->fBlockM2[i]   = value.fBlockM2[i];
+      this->fBlockRMS[i]  = value.fBlockRMS[i]; // I added this
     }
     this->fHardwareBlockSum = value.fHardwareBlockSum;
     this->fHardwareBlockSumM2 = value.fHardwareBlockSumM2;
     this->fHardwareBlockSumError = value.fHardwareBlockSumError;
+    this->fHardwareBlockSumRMS = value.fHardwareBlockSumRMS; // I added this
     this->fNumberOfSamples = value.fNumberOfSamples;
     this->fSequenceNumber  = value.fSequenceNumber;
 
@@ -1209,6 +1283,7 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator= (const QwMollerADC_Channel &
        this->fBlockSumSq_raw[i] = value.fBlockSumSq_raw[i];
        this->fBlock_min[i]     = value.fBlock_min[i];
        this->fBlock_max[i]     = value.fBlock_max[i];
+       this->fBlockSample[i]    = value.fBlockSample[i]; // I added this
       }
       this->fHardwareBlockSum_raw = value.fHardwareBlockSum_raw;
       this->fSoftwareBlockSum_raw = value.fSoftwareBlockSum_raw;
