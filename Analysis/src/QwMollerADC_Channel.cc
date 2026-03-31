@@ -239,12 +239,31 @@ void QwMollerADC_Channel::InitializeChannel(TString subsystem, TString instrumen
 
 void QwMollerADC_Channel::LoadChannelParameters(QwParameterFile &paramfile){
   UInt_t value = 0;
-  if (paramfile.ReturnValue("sample_size",value)){
+
+  if (paramfile.ReturnValue("sample_size", value)) {
     SetDefaultSampleSize(value);
   } else {
     QwWarning << "MollerADC Channel "
               << GetElementName()
               << " cannot set the default sample size."
+              << QwLog::endl;
+  }
+
+  UInt_t numberOfBlocks = 0;
+  if (paramfile.ReturnValue("NumberOfBlocks", numberOfBlocks)) {
+    if (numberOfBlocks > static_cast<UInt_t>(kMaxBlock)) {
+      QwWarning << "MollerADC Channel " << GetElementName()
+                << ": NumberOfBlocks (" << numberOfBlocks
+                << ") is greater than kMaxBlock (" << kMaxBlock
+                << ") and has been forced to kMaxBlock."
+                << QwLog::endl;
+      numberOfBlocks = kMaxBlock;
+    }
+    fBlocksPerEvent = numberOfBlocks;
+  } else {
+    QwWarning << "MollerADC Channel "
+              << GetElementName()
+              << " cannot set NumberOfBlocks."
               << QwLog::endl;
   }
 };
@@ -763,7 +782,7 @@ void  QwMollerADC_Channel::ConstructHistograms(TDirectory *folder, TString &pref
 
     if(fDataToSave==kRaw)
       {
-        fHistograms.resize(2*kMaxBlock+2+1, NULL);
+        fHistograms.resize(2*fBlocksPerEvent+2+1, NULL);
         size_t index=0;
         for (Int_t i=0; i<fBlocksPerEvent; i++){
           fHistograms[index]   = gQwHists.Construct1DHist(basename+Form("_block%d_raw",i));
@@ -777,7 +796,7 @@ void  QwMollerADC_Channel::ConstructHistograms(TDirectory *folder, TString &pref
       }
     else if(fDataToSave==kDerived)
       {
-        fHistograms.resize(kMaxBlock+1+1, NULL);
+        fHistograms.resize(fBlocksPerEvent+1+1, NULL);
         Int_t index=0;
         for (Int_t i=0; i<fBlocksPerEvent; i++){
           fHistograms[index] = gQwHists.Construct1DHist(basename+Form("_block%d",i));
@@ -885,7 +904,7 @@ void  QwMollerADC_Channel::ConstructBranchAndVector(TTree *tree, TString &prefix
 }
 
   if (bBlock) {
-  for (int i = 0; i < kMaxBlock; i++) {
+  for (int i = 0; i < fBlocksPerEvent; i++) {
     values.push_back(Form("block%d", i), 'D');
     values.push_back(Form("block%d_rms", i), 'D');
   }
@@ -904,14 +923,14 @@ void  QwMollerADC_Channel::ConstructBranchAndVector(TTree *tree, TString &prefix
       values.push_back("hw_sum_raw", 'I');
     }
     if (bBlock_raw) {
-	for (int i = 0; i < kMaxBlock; i++) {
+	for (int i = 0; i < fBlocksPerEvent; i++) {
       values.push_back(Form("block%d_raw",i), 'I');
 	}
      
     }
 
       if (bBlock_raw) {
-	 for (int i = 0; i < kMaxBlock; i++) {
+	 for (int i = 0; i < fBlocksPerEvent; i++) {
         values.push_back(Form("SumSq_%d", i), 'L');
         values.push_back(Form("RawMin_%d", i), 'I');
         values.push_back(Form("RawMax_%d", i), 'I');
@@ -993,7 +1012,7 @@ void  QwMollerADC_Channel::FillTreeVector(QwRootTreeBranchVector& values) const
 }
 
     if (bBlock) {
-  for (Int_t i = 0; i < kMaxBlock; i++) {
+  for (Int_t i = 0; i < fBlocksPerEvent; i++) {
     values.SetValue(index++, this->GetBlockValue(i));
     values.SetValue(index++, this->GetBlockRMS(i));
   }
@@ -1020,7 +1039,7 @@ void  QwMollerADC_Channel::FillTreeVector(QwRootTreeBranchVector& values) const
         }
 
         if (bBlock_raw) {
-          for (int i = 0; i < kMaxBlock; i++) {
+          for (int i = 0; i < fBlocksPerEvent; i++) {
             values.SetValue(index++, fBlockSumSq_raw[i]);
             values.SetValue(index++, fBlock_min[i]);
             values.SetValue(index++, fBlock_max[i]);
@@ -1127,7 +1146,7 @@ void  QwMollerADC_Channel::ConstructNTupleAndVector(std::unique_ptr<ROOT::RNTupl
     if (fDataToSave == kRaw) {
       if (bHw_sum_raw) numElements += 1; // hw_sum_raw
       if (bBlock_raw) numElements += fBlocksPerEvent; // block_raw
-      numElements += 4*kMaxBlock; // fBlockSumSq_raw (4*kMaxBlock)
+      numElements += 4*fBlocksPerEvent; // fBlockSumSq_raw (4*fBlocksPerEvent)
       if (bSequence_number) numElements += 1; // sequence_number
     }
 
@@ -1170,7 +1189,7 @@ void  QwMollerADC_Channel::ConstructNTupleAndVector(std::unique_ptr<ROOT::RNTupl
         }
       }
 
-      for(int i = 0; i < kMaxBlock; i++){
+      for(int i = 0; i < fBlocksPerEvent; i++){
         fieldPtrs.push_back(model->MakeField<Double_t>((basename + Form("_sumsq%d_low", i)).Data()));
         fieldPtrs.push_back(model->MakeField<Double_t>((basename + Form("_sumsq%d_high", i)).Data()));
         fieldPtrs.push_back(model->MakeField<Double_t>((basename + Form("_min%d", i)).Data()));
@@ -1245,7 +1264,7 @@ void  QwMollerADC_Channel::FillNTupleVector(std::vector<Double_t>& values) const
           }
         }
 
-        for(int i = 0; i < kMaxBlock; i++){
+        for(int i = 0; i < fBlocksPerEvent; i++){
         values[index++] = fBlockSumSq_raw[i] & 0xffffffff;
         values[index++] = fBlockSumSq_raw[i] >> 32;
         values[index++] = fBlock_min[i];
@@ -1544,7 +1563,7 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator/= (const QwMollerADC_Channel 
     //
     // This requires that both the numerator and denominator are non-zero!
     //
-    for (Int_t i = 0; i < kMaxBlock; i++) {
+    for (Int_t i = 0; i < fBlocksPerEvent; i++) {
       if (this->fBlock[i] != 0.0 && denom.fBlock[i] != 0.0){
         ratio    = (this->fBlock[i]) / (denom.fBlock[i]);
         variance =  ratio * ratio *
@@ -1779,7 +1798,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
       fHardwareBlockSumM2 -= (M12 - M11)
         * (M12 - fHardwareBlockSum); // note: using updated mean
       // and for individual blocks
-      for (Int_t i = 0; i < kMaxBlock; i++) {
+      for (Int_t i = 0; i < fBlocksPerEvent; i++) {
         M11 = fBlock[i];
         M12 = value.fBlock[i];
         M22 = value.fBlockM2[i];
@@ -1793,7 +1812,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
       if (fabs(fHardwareBlockSumM2) < 10.*std::numeric_limits<double>::epsilon())
         fHardwareBlockSumM2 = 0; // rounding
       // and for individual blocks
-      for (Int_t i = 0; i < kMaxBlock; i++) {
+      for (Int_t i = 0; i < fBlocksPerEvent; i++) {
         M11 = fBlock[i];
         M12 = value.fBlock[i];
         M22 = value.fBlockM2[i];
@@ -1810,7 +1829,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
       if (fabs(fHardwareBlockSumM2) < 10.*std::numeric_limits<double>::epsilon())
         fHardwareBlockSumM2 = 0; // rounding
       // and for individual blocks
-      for (Int_t i = 0; i < kMaxBlock; i++) {
+      for (Int_t i = 0; i < fBlocksPerEvent; i++) {
         M11 = fBlock[i];
         M12 = value.fBlock[i];
         M22 = value.fBlockM2[i];
@@ -1831,7 +1850,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
     fHardwareBlockSumM2 += (M12 - M11)
          * (M12 - fHardwareBlockSum); // note: using updated mean
     // and for individual blocks
-    for (Int_t i = 0; i < kMaxBlock; i++) {
+    for (Int_t i = 0; i < fBlocksPerEvent; i++) {
       M11 = fBlock[i];
       M12 = value.fBlock[i];
       M22 = value.fBlockM2[i];
@@ -1844,7 +1863,7 @@ void QwMollerADC_Channel::AccumulateRunningSum(const QwMollerADC_Channel& value,
     fHardwareBlockSum += n2 * (M12 - M11) / n;
     fHardwareBlockSumM2 += M22 + n1 * n2 * (M12 - M11) * (M12 - M11) / n;
     // and for individual blocks
-    for (Int_t i = 0; i < kMaxBlock; i++) {
+    for (Int_t i = 0; i < fBlocksPerEvent; i++) {
       M11 = fBlock[i];
       M12 = value.fBlock[i];
       M22 = value.fBlockM2[i];

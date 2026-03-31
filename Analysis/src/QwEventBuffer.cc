@@ -877,7 +877,7 @@ Bool_t QwEventBuffer::FillSubsystemData(QwSubsystemArray &subsystems)
     }
 
 //     if (GetSubbankType() == 0x85) {
-       std::cout << "ProcessEventBuffer: , SubbankTag= "<< decoder->GetSubbankTag()<<" FragLength="<<decoder->GetFragLength() <<std::endl;
+     //  std::cout << "ProcessEventBuffer: , SubbankTag= "<< decoder->GetSubbankTag()<<" FragLength="<<decoder->GetFragLength() <<std::endl;
 //     }
 
     // QwDebug << "QwEventBuffer::FillSubsystemData:  "
