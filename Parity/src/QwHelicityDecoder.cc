@@ -238,6 +238,9 @@ void  QwHelicityDecoder::ProcessEvent()
     std::cout<<"pattern phase = "<<fPatternPhaseNumber<<std::endl;
     std::cout<<"max pattern phase = "<<fMaxPatternPhase<<std::endl;
     std::cout<<"min pattern phase = "<<fMinPatternPhase<<std::endl;
+    std::cout << "Helicity Info: [Reported = " << fHelicityReported
+          << ", Delayed = " << fHelicityDelayed
+          << ", Actual = " << fHelicityActual << "]" << std::endl;
 
 
   }
@@ -539,7 +542,7 @@ void QwHelicityDecoder::FillHDVariables(uint32_t data, uint32_t index) {
     fSeed_Reported=data;
     break;
   case 1:
-    fNum_TStable_Fall=data;
+    fNum_TStable_Fall=data; 
     break;
   case 2:
     fEventNumber=data;
@@ -758,7 +761,31 @@ void  QwHelicityDecoder::ConstructBranchAndVector(TTree *tree, TString &prefix, 
       basename = "hd_Reported_Pattern_Hel";
        values.push_back(basename, 'I');
        tree->Branch(basename, &(values.back<Double_t>()), basename+"/I");
-      //
+      //new time / status variables
+       basename = "hd_num_tstable_fall";
+      values.push_back(basename, 'I');
+      tree->Branch(basename, &(values.back<Double_t>()), basename+"/I");
+
+      basename = "hd_num_pair_sync";
+      values.push_back(basename, 'I');
+      tree->Branch(basename, &(values.back<Double_t>()), basename+"/I");
+
+      basename = "hd_time_since_tstable";
+      values.push_back(basename, 'I');
+      tree->Branch(basename, &(values.back<Double_t>()), basename+"/I");
+
+      basename = "hd_time_since_tsettle";
+      values.push_back(basename, 'I');
+      tree->Branch(basename, &(values.back<Double_t>()), basename+"/I");
+
+      basename = "hd_last_duration_tstable";
+      values.push_back(basename, 'I');
+      tree->Branch(basename, &(values.back<Double_t>()), basename+"/I");
+
+      basename = "hd_last_duration_tsettle";
+      values.push_back(basename, 'I');
+      tree->Branch(basename, &(values.back<Double_t>()), basename+"/I");
+
       for (size_t i=0; i<fWord.size(); i++)
         {
           basename = fWord[i].fWordName;
@@ -960,6 +987,14 @@ void  QwHelicityDecoder::FillTreeVector(QwRootTreeBranchVector &values) const
       values.SetValue(index++, fEventNumber);
       values.SetValue(index++, fEventPolarity);
       values.SetValue(index++, fReportedPatternHel);
+       // NEW TIME / STATUS VARIABLES
+      values.SetValue(index++, fNum_TStable_Fall);
+      values.SetValue(index++, fNum_Pair_Sync);
+      values.SetValue(index++, fTime_since_TStable);
+      values.SetValue(index++, fTime_since_TSettle);
+      values.SetValue(index++, fLast_Duration_TStable);
+      values.SetValue(index++, fLast_Duration_TSettle);
+
       for (size_t i=0; i<fWord.size(); i++)
 	values.SetValue(index++, fWord[i].fValue);
     }
