@@ -1150,6 +1150,13 @@ VQwSubsystem&  QwHelicityDecoder::operator=  (VQwSubsystem *value)
       this->fIgnoreHelicity = input->fIgnoreHelicity;
       this->fEventPolarity = input->fEventPolarity;
       this->fReportedPatternHel = input->fReportedPatternHel;
+      //new time / status variables
+      this->fNum_TStable_Fall     = input->fNum_TStable_Fall;
+      this->fNum_Pair_Sync        = input->fNum_Pair_Sync;
+      this->fTime_since_TStable   = input->fTime_since_TStable;
+      this->fTime_since_TSettle   = input->fTime_since_TSettle;
+      this->fLast_Duration_TStable = input->fLast_Duration_TStable;
+      this->fLast_Duration_TSettle = input->fLast_Duration_TSettle;
 
       this->fErrorFlag = input->fErrorFlag;
       this->fEventNumberFirst     = input->fEventNumberFirst;
