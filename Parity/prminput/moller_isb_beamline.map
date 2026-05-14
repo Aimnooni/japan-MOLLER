@@ -1,8 +1,8 @@
-BankID = 0x2400
-sample_size = 921
+NumberOfBlocks = 4
+sample_size = 7201
 
-ROCID = 13
-
+ROC = 13
+BANK = 212
 MollerADC    0    0    bpmstripline    bpm2I00xp
 MollerADC    0    1    bpmstripline    bpm2I00xm
 MollerADC    0    2    bpmstripline    bpm2I00yp
@@ -21,8 +21,8 @@ MollerADC    0   14    bpmstripline    bpm1I02yp
 MollerADC    0   15    bpmstripline    bpm1I02ym
 
 
-ROCID = 15
-
+ROC = 15
+BANK = 212
 MollerADC    0    0    bpmstripline    bpm1I04xp
 MollerADC    0    1    bpmstripline    bpm1I04xm
 MollerADC    0    2    bpmstripline    bpm1I04yp
@@ -41,8 +41,8 @@ MollerADC    0   14    bpmstripline    bpm0I07yp
 MollerADC    0   15    bpmstripline    bpm0I07ym
 
 
-ROCID = 17
-
+ROC = 17
+Bank = 212
 MollerADC    0    0    bpmstripline    bpm0L01xp
 MollerADC    0    1    bpmstripline    bpm0L01xm
 MollerADC    0    2    bpmstripline    bpm0L01yp
@@ -61,8 +61,8 @@ MollerADC    0   14    bpmstripline    bpm0L04yp
 MollerADC    0   15    bpmstripline    bpm0L04ym
 
 
-ROCID = 19
-
+ROC = 19
+Bank = 212
 MollerADC    0    0    bpmstripline    bpm0L05xp
 MollerADC    0    1    bpmstripline    bpm0L05xm
 MollerADC    0    2    bpmstripline    bpm0L05yp
@@ -77,12 +77,12 @@ MollerADC    0   10    bpmstripline    bpm0R05yp
 MollerADC    0   11    bpmstripline    bpm0R05ym
 MollerADC    0   12    bcm             BCM0L02
 MollerADC    0   13    bcm             Phase Monitor
-MollerADC    0   14    bcm             Battery
+MollerADC    0   14    bcm             rack_battery_isb
 MollerADC    0   15    bcm             inj_laser_table_battery_3
 
 
-ROCID = 23
-
+ROC = 23
+Bank = 212
 MollerADC    0    0    bpmstripline    bpm0L07xp
 MollerADC    0    1    bpmstripline    bpm0L07xm
 MollerADC    0    2    bpmstripline    bpm0L07yp
@@ -101,7 +101,8 @@ MollerADC    0   14    bpmstripline    bpm0L10yp
 MollerADC    0   15    bpmstripline    bpm0L10ym
 
 
-ROCID = 16
+ROC = 16
+Bank = 212
 MollerADC    0    0    bpmstripline    bpm0R03xp
 MollerADC    0    1    bpmstripline    bpm0R03xm
 MollerADC    0    2    bpmstripline    bpm0R03yp
@@ -118,3 +119,5 @@ MollerADC    0   12    bpmstripline    bpm0I05xp
 MollerADC    0   13    bpmstripline    bpm0I05xm
 MollerADC    0   14    bpmstripline    bpm0I05yp
 MollerADC    0   15    bpmstripline    bpm0I05ym
+
+

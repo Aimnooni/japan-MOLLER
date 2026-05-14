@@ -123,7 +123,6 @@ class QwMollerADC_Channel: public VQwHardwareChannel, public MQwMockable {
     // This will be checked against the no.of samples read by the module
     fNumberOfSamples_map = num_samples_map;
   };
-
   void  ClearEventData() override;
 
   /// Internally generate random event data
@@ -380,8 +379,6 @@ private:
   UInt_t fPreviousSequenceNumber; ///< Previous event sequence number for this channel
   UInt_t fNumberOfSamples;     ///< Number of samples  read through the module
   UInt_t fNumberOfSamples_map; ///< Number of samples in the expected to  read through the module. This value is set in the QwBeamline map file
-
-
   // Set of error counters for each HW test.
   Int_t fErrorCount_HWSat;    ///< check to see ADC channel is saturated
   Int_t fErrorCount_sample;   ///< for sample size check

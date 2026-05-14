@@ -1,0 +1,472 @@
+! intadcse11
+ROC=11
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+! intadcse12
+ROC=06
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+! intadcse10
+ROC=09
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcse09
+ROC=21
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcse08
+ROC=25
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf23
+ROC=48
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf06
+ROC=27
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf10
+ROC=04
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf11
+ROC=29
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf12
+ROC=33
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf13
+ROC=34
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf14
+ROC=36
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf15
+ROC=38
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf16
+ROC=40
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf17
+ROC=42
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+! intadcdf18
+ROC=44
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6
+
+
+
+
+
+
+! intadcdf20
+ROC=46
+Bank=212
+sample_size=7201
+NumberOfBlocks=4
+!
+!
+! module.type, module.num, module.chan, det.type, det.name
+MollerADC, 0, 0,  bcm,  TQ01_R1
+MollerADC, 0, 1,  bcm,  TQ01_R2
+MollerADC, 0, 2,  bcm,  TQ01_R3
+MollerADC, 0, 3,  bcm,  TQ01_R4
+MollerADC, 0, 4,  bcm,  TQ01_R5l
+MollerADC, 0, 5,  bcm,  TQ01_R5c
+MollerADC, 0, 6,  bcm,  TQ01_R5r
+MollerADC, 0, 7,  bcm,  TQ01_R6
+MollerADC, 0, 8,  bcm,  TQ02_R1
+MollerADC, 0, 9,  bcm,  TQ02_R2
+MollerADC, 0, 10,  bcm,  TQ02_R3
+MollerADC, 0, 11,  bcm,  TQ02_R4
+MollerADC, 0, 12,  bcm,  TQ02_R5l
+MollerADC, 0, 13,  bcm,  TQ02_R5c
+MollerADC, 0, 14,  bcm,  TQ02_R5r
+MollerADC, 0, 15,  bcm,  TQ02_R6

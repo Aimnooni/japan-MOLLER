@@ -187,7 +187,7 @@ Bool_t QwHelicityDecoder::ApplySingleEventCuts(){
 
 void  QwHelicityDecoder::ProcessEvent()
 {
-  Bool_t ldebug = kTRUE;
+  Bool_t ldebug = kFALSE;
   fErrorFlag = 0;
 
   if (! HasDataLoaded()) return;
@@ -197,8 +197,9 @@ void  QwHelicityDecoder::ProcessEvent()
   if(firstpattern && fPatternNumber > fPatternNumberOld){
     firstpattern = kFALSE;
   }
-  
-  if(fEventNumber!=(fEventNumberOld+1)){
+ 
+ 
+  if((fEventNumberFirst!=-1) && (fEventNumber!=(fEventNumberOld+1))){
     Int_t nummissed(fEventNumber - (fEventNumberOld+1));
     QwError << "QwHelicityDecoder::ProcessEvent read event# ("
 	    << fEventNumber << ") is not  old_event#+1; missed "

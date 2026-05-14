@@ -249,22 +249,25 @@ void QwMollerADC_Channel::LoadChannelParameters(QwParameterFile &paramfile){
               << QwLog::endl;
   }
 
-  UInt_t numberOfBlocks = 0;
-  if (paramfile.ReturnValue("NumberOfBlocks", numberOfBlocks)) {
-    if (numberOfBlocks > static_cast<UInt_t>(kMaxBlock)) {
+  UInt_t NumberOfBlocks = 0;
+
+  if (paramfile.ReturnValue("numberofblocks", NumberOfBlocks)) {
+    if (NumberOfBlocks > static_cast<UInt_t>(kMaxBlock)) {
       QwWarning << "MollerADC Channel " << GetElementName()
-                << ": NumberOfBlocks (" << numberOfBlocks
+                << ": NumberOfBlocks (" << NumberOfBlocks
                 << ") is greater than kMaxBlock (" << kMaxBlock
                 << ") and has been forced to kMaxBlock."
                 << QwLog::endl;
-      numberOfBlocks = kMaxBlock;
+      NumberOfBlocks = kMaxBlock;
     }
-    fBlocksPerEvent = numberOfBlocks;
+    fBlocksPerEvent = NumberOfBlocks;
   } else {
     QwWarning << "MollerADC Channel "
               << GetElementName()
-              << " cannot set NumberOfBlocks."
+              << " cannot set NumberOfBlocks. Defaulting to 4."
               << QwLog::endl;
+
+    fBlocksPerEvent = 4;
   }
 };
 
@@ -477,6 +480,16 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
                                            UInt_t  num_words_left,
                                            UInt_t  index)
 {
+/* static int debug_counter = 0;
+
+  if (debug_counter < 20) {  // limit output
+    std::cout << "[DEBUG] Entering QwMollerADC_Channel::ProcessEvBuffer for channel: "
+              << GetElementName()
+              << " | words_left=" << num_words_left
+              << " | index=" << index
+              << std::endl;
+  }
+  debug_counter++; */
   // small debug counter 
   //static int debug_event_counter = 0;
 
@@ -546,6 +559,12 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
   int64_t ch_sum_block = static_cast<int64_t>(read_be64_from_u32(p + 10));
   uint64_t ch_sumsq_block         = read_be64_from_u32(p + 12);
 
+if (ch_sample_count_block == 0) {
+  std::cerr << "QwMollerADC_Channel::ProcessEvBuffer: "
+            << "ch_sample_count_block == 0, cannot compute blockindex!\n";
+  return need_u32;
+}
+
 //int blockindex = static_cast<int>(ch_sample_count_win / ch_sample_count_block) - 1;
 int blockindex = static_cast<int>(std::round(static_cast<double>(ch_sample_count_win) / ch_sample_count_block) - 1.0);
 
@@ -584,13 +603,6 @@ int blockindex = static_cast<int>(std::round(static_cast<double>(ch_sample_count
 
   fNumberOfSamples      = static_cast<UInt_t>(ch_sample_count_win);
   fHardwareBlockSum_raw = static_cast<Long64_t>(ch_sum_win);
-  
-if (ch_sample_count_block == 0) {
-  std::cerr << "QwMollerADC_Channel::ProcessEvBuffer: "
-            << "ch_sample_count_block == 0, cannot compute blockindex!\n";
-  return need_u32;
-}
-
 
 
 if (blockindex < 0 || blockindex >= kMaxBlock) {
@@ -1050,13 +1062,13 @@ void  QwMollerADC_Channel::FillTreeVector(QwRootTreeBranchVector& values) const
           values.SetValue(index++, this->fSequenceNumber);
       }
   }
-  static int fill_debug_counter = 0;
+  /*static int fill_debug_counter = 0;
 if (fill_debug_counter < 10) {
   std::cout << "\n=== FILLTREE DEBUG Event " << fill_debug_counter << " ===\n"
             << "GetHardwareSumRMS() = " << this->GetHardwareSumRMS() << "\n"
             << "GetBlockRMS(0)      = " << this->GetBlockRMS(0) << std::endl;
 }
-fill_debug_counter++;
+fill_debug_counter++; */
 }
 
 #ifdef HAS_RNTUPLE_SUPPORT
