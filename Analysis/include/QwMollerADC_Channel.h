@@ -146,6 +146,8 @@ class QwMollerADC_Channel: public VQwHardwareChannel, public MQwMockable {
   void  EncodeEventData(std::vector<UInt_t> &buffer) override;
   /// Decode the event data from a CODA buffer
   Int_t ProcessEvBuffer(UInt_t* buffer, UInt_t num_words_left, UInt_t index = 0) override;
+  Int_t ProcessEvBuffer_oldmock(UInt_t* buffer, UInt_t num_words_left, UInt_t index = 0);
+  Int_t ProcessEvBuffer_newreshuffled(UInt_t* buffer, UInt_t num_words_left, UInt_t index = 0); //{return 0;};
   /// Process the event data according to pedestal and calibration factor
   void  ProcessEvent() override;
 
@@ -319,8 +321,8 @@ private:
   static const Int_t  kMaxChannels;     //no.of channels per module
   static const Int_t  kModuleHeaderWords;     //no.of words per header
   static constexpr Int_t kMaxBlock=5; // maximum no.of blocks
-  
-  
+  static enum EDecodeMode  {kOldMock = 0, kNewReshuffled} fDecodeMode;
+  static void SetDecodeMode(int input){fDecodeMode=static_cast<EDecodeMode>(input);};
   /*! \name ADC Calibration                    */
   // @{
   static const Double_t kMollerADC_VoltsPerBit;

@@ -239,6 +239,9 @@ void QwMollerADC_Channel::InitializeChannel(TString subsystem, TString instrumen
 
 void QwMollerADC_Channel::LoadChannelParameters(QwParameterFile &paramfile){
   UInt_t value = 0;
+  if (fDecodeMode==kOldMock && paramfile.ReturnValue("decode_mode",value)){
+     SetDecodeMode(value);
+     }
 
   if (paramfile.ReturnValue("sample_size", value)) {
     SetDefaultSampleSize(value);
@@ -475,8 +478,86 @@ void QwMollerADC_Channel::EncodeEventData(std::vector<UInt_t> &buffer)
   return;
 }
 
+Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer, UInt_t num_words_left, UInt_t index)
+{
+Int_t retval;
+if (fDecodeMode == kOldMock){
+retval=ProcessEvBuffer_oldmock(buffer, num_words_left, index);
+} else {
+retval=ProcessEvBuffer_newreshuffled(buffer, num_words_left, index);
+}
+return retval;
+}
 
-Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
+Int_t QwMollerADC_Channel::ProcessEvBuffer_oldmock(UInt_t* buffer, UInt_t num_words_left, UInt_t index)
+{
+  UInt_t words_read = 0;
+  UInt_t raw_u32[kWordsPerChannel] = {0};
+  // The conversion from UInt_t to Double_t discards the sign, so we need an intermediate
+  // static_cast from UInt_t to Int_t.
+  Int_t raw_i32[kWordsPerChannel] = {0};
+
+  if (IsNameEmpty()){
+    return  fNumberOfDataWords;
+  } 
+
+ if (num_words_left < fNumberOfDataWords)
+    {
+   std::cerr << "QwMollerADC_Channel::ProcessEvBuffer_oldmock: "
+	     << "Not enough words for old mock MOLLER ADC channel "
+	     << "(need " << fNumberOfDataWords
+ 	     << ", have " << num_words_left << ")!"
+ 	     << std::endl;
+	return 0;
+}
+
+//copy local channel words
+
+   for (Int_t i=0; i<kWordsPerChannel; i++){
+        raw_u32[i] = buffer[i];
+        raw_i32[i] = static_cast<Int_t>(raw_u32[i]);
+      }
+
+      fSoftwareBlockSum_raw = 0;
+
+   for (Int_t blockindex = 0; blockindex < fBlocksPerEvent; blockindex++) {
+	const Int_t base = blockindex * 5;
+
+	Int_t ch_sum_block = raw_i32[base];
+	Long64_t ch_sumsq_block   = static_cast<Long64_t>(raw_i32[base + 1]);
+        ch_sumsq_block           += static_cast<Long64_t>(raw_i32[base + 2]) << 32;
+
+        Int_t ch_min_20           = raw_i32[base + 3];
+        Int_t ch_max_20           = raw_i32[base + 4];
+
+        fBlock_raw[blockindex]      = ch_sum_block;
+        fBlockSumSq_raw[blockindex] = ch_sumsq_block;
+        fBlock_min[blockindex]      = ch_min_20;
+        fBlock_max[blockindex]      = ch_max_20;
+
+        fSoftwareBlockSum_raw += ch_sum_block;
+}
+
+	// Old mock hardware/window sum
+        Long64_t ch_sum_win = static_cast<Long64_t>(raw_i32[20]);
+        fHardwareBlockSum_raw = ch_sum_win;
+ 
+        /*
+   * Permanent change in the structure of the 6th word of the ADC readout.
+   * The upper 16 bits are the number of samples, and the upper 8 of the
+   * lower 16 are the sequence number.
+   */
+  UInt_t ch_misc = raw_u32[25];
+
+  fSequenceNumber  = (ch_misc >> 8)  & 0xFF;
+  fNumberOfSamples = (ch_misc >> 16) & 0xFFFF;
+
+  words_read = fNumberOfDataWords;
+
+  return words_read;
+}
+
+Int_t QwMollerADC_Channel::ProcessEvBuffer_newreshuffled(UInt_t* buffer,
                                            UInt_t  num_words_left,
                                            UInt_t  index)
 {
@@ -700,6 +781,8 @@ if (ch_sample_count_block > 0) {
 
   return need_u32;
 }
+
+
 
 
 void QwMollerADC_Channel::ProcessEvent()
