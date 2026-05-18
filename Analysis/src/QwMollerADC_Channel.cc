@@ -186,7 +186,13 @@ void QwMollerADC_Channel::InitializeChannel(TString name, TString datatosave)
   fPreviousSequenceNumber = 0;
   fNumberOfSamples_map    = 0;
   fNumberOfSamples        = 0;
-
+//added this
+  fRegionNumber = 0;
+fRegionTimestamp = 0;
+fHeaderPacketCount = 0;
+fHeaderBlockNumber = 0;
+fHeaderNumWords = 0;
+fHeaderTSamples = 0;
   // Use internal random variable by default
   fUseExternalRandomVariable = false;
 
@@ -293,6 +299,7 @@ void QwMollerADC_Channel::ClearEventData()
   fHardwareBlockSumRMS = 0.0;
   fSequenceNumber   = 0;
   fNumberOfSamples  = 0;
+  
   fGoodEventCount   = 0;
   fErrorFlag=0;
   return;
@@ -926,6 +933,15 @@ void  QwMollerADC_Channel::ConstructBranchAndVector(TTree *tree, TString &prefix
     values.push_back("num_samples", 'i');
   }
 
+//added this
+// MollerADC region/header metadata
+  values.push_back("region_number", 'D');
+values.push_back("region_timestamp", 'D');
+values.push_back("header_num_words", 'D');
+values.push_back("header_block_number", 'D');
+values.push_back("header_packet_count", 'D');
+values.push_back("header_tsamples", 'D');
+
   if (bDevice_Error_Code) {
     values.push_back("Device_Error_Code", 'i');
   }
@@ -1033,6 +1049,15 @@ void  QwMollerADC_Channel::FillTreeVector(QwRootTreeBranchVector& values) const
     // num_samples
     if (bNum_samples)
       values.SetValue(index++, (fDataToSave == kMoments)? this->fGoodEventCount: this->fNumberOfSamples);
+    
+    //added this
+    values.SetValue(index++, static_cast<Double_t>(this->fRegionNumber));
+values.SetValue(index++, static_cast<Double_t>(this->fRegionTimestamp));
+values.SetValue(index++, static_cast<Double_t>(this->fHeaderNumWords));
+values.SetValue(index++, static_cast<Double_t>(this->fHeaderBlockNumber));
+values.SetValue(index++, static_cast<Double_t>(this->fHeaderPacketCount));
+values.SetValue(index++, static_cast<Double_t>(this->fHeaderTSamples));
+    
     // Device_Error_Code
     if (bDevice_Error_Code)
       values.SetValue(index++, this->fErrorFlag);
@@ -1307,6 +1332,13 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator= (const QwMollerADC_Channel &
     this->fHardwareBlockSumRMS = value.fHardwareBlockSumRMS; // I added this
     this->fNumberOfSamples = value.fNumberOfSamples;
     this->fSequenceNumber  = value.fSequenceNumber;
+    //added this
+this->fRegionNumber      = value.fRegionNumber;
+this->fRegionTimestamp   = value.fRegionTimestamp;
+this->fHeaderNumWords    = value.fHeaderNumWords;
+this->fHeaderBlockNumber = value.fHeaderBlockNumber;
+this->fHeaderPacketCount = value.fHeaderPacketCount;
+this->fHeaderTSamples    = value.fHeaderTSamples;
 
     if (this->fDataToSave == kRaw){
       for (Int_t i=0; i<fBlocksPerEvent; i++){
@@ -1426,7 +1458,13 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator+= (const QwMollerADC_Channel 
     this->fNumberOfSamples     += value.fNumberOfSamples;
     this->fSequenceNumber       = 0;
     this->fErrorFlag            |= (value.fErrorFlag);
-
+    //added this
+this->fRegionNumber      = value.fRegionNumber;
+this->fRegionTimestamp   = value.fRegionTimestamp;
+this->fHeaderNumWords    = value.fHeaderNumWords;
+this->fHeaderBlockNumber = value.fHeaderBlockNumber;
+this->fHeaderPacketCount = value.fHeaderPacketCount;
+this->fHeaderTSamples    = value.fHeaderTSamples;
   }
 
   return *this;
@@ -1451,6 +1489,13 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator-= (const QwMollerADC_Channel 
     this->fNumberOfSamples     += value.fNumberOfSamples;
     this->fSequenceNumber       = 0;
     this->fErrorFlag           |= (value.fErrorFlag);
+    //added this
+this->fRegionNumber      = value.fRegionNumber;
+this->fRegionTimestamp   = value.fRegionTimestamp;
+this->fHeaderNumWords    = value.fHeaderNumWords;
+this->fHeaderBlockNumber = value.fHeaderBlockNumber;
+this->fHeaderPacketCount = value.fHeaderPacketCount;
+this->fHeaderTSamples    = value.fHeaderTSamples;
   }
 
   return *this;
@@ -1475,6 +1520,13 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator*= (const QwMollerADC_Channel 
     this->fNumberOfSamples      *= value.fNumberOfSamples;
     this->fSequenceNumber        = 0;
     this->fErrorFlag            |= (value.fErrorFlag);
+    //added this
+this->fRegionNumber      = value.fRegionNumber;
+this->fRegionTimestamp   = value.fRegionTimestamp;
+this->fHeaderNumWords    = value.fHeaderNumWords;
+this->fHeaderBlockNumber = value.fHeaderBlockNumber;
+this->fHeaderPacketCount = value.fHeaderPacketCount;
+this->fHeaderTSamples    = value.fHeaderTSamples;
   }
 
   return *this;
@@ -1613,7 +1665,13 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator/= (const QwMollerADC_Channel 
     //  'OR' the HW error codes in the fErrorFlag values together.
     fErrorFlag |= (denom.fErrorFlag);//mix only the hardware error codes
   }
-
+// added this
+this->fRegionNumber      = denom.fRegionNumber;
+this->fRegionTimestamp   = denom.fRegionTimestamp;
+this->fHeaderNumWords    = denom.fHeaderNumWords;
+this->fHeaderBlockNumber = denom.fHeaderBlockNumber;
+this->fHeaderPacketCount = denom.fHeaderPacketCount;
+this->fHeaderTSamples    = denom.fHeaderTSamples;
   // Nanny
   if (fHardwareBlockSum != fHardwareBlockSum)
     QwWarning << "Angry Nanny: NaN detected in " << GetElementName() << QwLog::endl;

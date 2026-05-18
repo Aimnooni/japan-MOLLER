@@ -103,6 +103,15 @@ void RandomizeMollerEvent(int helicity, const QwBeamCharge& charge, const QwBeam
   Double_t GetValue();
   Double_t GetValue(Int_t blocknum);
 
+
+//added this
+void SetMollerADCHeaderData(UInt_t region_number,
+                            ULong64_t region_timestamp,
+                            UInt_t header_num_words,
+                            UInt_t header_block_number,
+                            ULong64_t header_packet_count,
+                            ULong64_t header_tsamples);
+
   void  ProcessEvent();
   Bool_t ApplyHWChecks();//Check for hardware errors in the devices
   Bool_t ApplySingleEventCuts();//Check for good events by setting limits on the devices readings

@@ -141,6 +141,36 @@ class QwMollerADC_Channel: public VQwHardwareChannel, public MQwMockable {
   void  SetHardwareSum(Double_t hwsum, UInt_t sequencenumber = 0);
   void  SetEventData(Double_t* block, UInt_t sequencenumber = 0);
   void  SetRawEventData() override;
+  
+  // added this
+  void SetMollerADCHeaderData(UInt_t region_number,
+                            ULong64_t region_timestamp,
+                            UInt_t header_num_words,
+                            UInt_t header_block_number,
+                            ULong64_t header_packet_count,
+                            ULong64_t header_tsamples)
+{
+  fRegionNumber = region_number;
+  fRegionTimestamp = region_timestamp;
+  fHeaderNumWords = header_num_words;
+  fHeaderBlockNumber = header_block_number;
+  fHeaderPacketCount = header_packet_count;
+  fHeaderTSamples = header_tsamples;
+}
+  
+  void SetRegionNumber(UInt_t x)          { fRegionNumber = x; }
+void SetRegionTimestamp(ULong64_t x)    { fRegionTimestamp = x; }
+void SetHeaderPacketCount(ULong64_t x)  { fHeaderPacketCount = x; }
+void SetHeaderBlockNumber(UInt_t x)     { fHeaderBlockNumber = x; }
+void SetHeaderNumWords(UInt_t x)        { fHeaderNumWords = x; }
+void SetHeaderTSamples(ULong64_t x)     { fHeaderTSamples = x; }
+
+UInt_t GetRegionNumber() const              { return fRegionNumber; }
+ULong64_t GetRegionTimestamp() const        { return fRegionTimestamp; }
+ULong64_t GetHeaderPacketCount() const      { return fHeaderPacketCount; }
+UInt_t GetHeaderBlockNumber() const         { return fHeaderBlockNumber; }
+UInt_t GetHeaderNumWords() const            { return fHeaderNumWords; }
+ULong64_t GetHeaderTSamples() const         { return fHeaderTSamples; }
 
   /// Encode the event data into a CODA buffer
   void  EncodeEventData(std::vector<UInt_t> &buffer) override;
@@ -378,6 +408,12 @@ private:
   UInt_t fSequenceNumber;      ///< Event sequence number for this channel
   UInt_t fPreviousSequenceNumber; ///< Previous event sequence number for this channel
   UInt_t fNumberOfSamples;     ///< Number of samples  read through the module
+  UInt_t    fRegionNumber;
+ULong64_t fRegionTimestamp;
+UInt_t    fHeaderNumWords;
+UInt_t    fHeaderBlockNumber;
+ULong64_t fHeaderPacketCount;
+ULong64_t fHeaderTSamples;
   UInt_t fNumberOfSamples_map; ///< Number of samples in the expected to  read through the module. This value is set in the QwBeamline map file
   // Set of error counters for each HW test.
   Int_t fErrorCount_HWSat;    ///< check to see ADC channel is saturated
