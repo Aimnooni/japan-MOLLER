@@ -24,6 +24,7 @@ const Bool_t QwMollerADC_Channel::kDEBUG = kFALSE;
 const Int_t  QwMollerADC_Channel::kWordsPerChannel = 14;
 const Int_t  QwMollerADC_Channel::kMaxChannels     = 16;
 const Int_t  QwMollerADC_Channel::kModuleHeaderWords = 8;
+QwMollerADC_Channel::EDecodeMode QwMollerADC_Channel::fDecodeMode = QwMollerADC_Channel::kNewReshuffled;
 
 const Double_t QwMollerADC_Channel::kTimePerSample = (2.0/30.0) * Qw::us; //2.0 originally
 
