@@ -487,21 +487,6 @@ void QwIntegrationPMT::Difference(const QwIntegrationPMT &value1, const QwIntegr
   *this -= value2;
 }
 
-//added this
-void QwIntegrationPMT::SetMollerADCHeaderData(UInt_t region_number,
-                                              ULong64_t region_timestamp,
-                                              UInt_t header_num_words,
-                                              UInt_t header_block_number,
-                                              ULong64_t header_packet_count,
-                                              ULong64_t header_tsamples)
-{
-  fTriumf_ADC.SetMollerADCHeaderData(region_number,
-                                  region_timestamp,
-                                  header_num_words,
-                                  header_block_number,
-                                  header_packet_count,
-                                  header_tsamples);
-}
 
 
 void QwIntegrationPMT::Ratio(QwIntegrationPMT &numer, QwIntegrationPMT &denom)

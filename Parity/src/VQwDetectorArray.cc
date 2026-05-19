@@ -1016,141 +1016,47 @@ Int_t VQwDetectorArray::ProcessConfigurationBuffer(const ROCID_t roc_id, const B
 }
 
 
-Int_t VQwDetectorArray::ProcessEvBuffer(const ROCID_t roc_id,
-                                        const BankID_t bank_id,
-                                        UInt_t* buffer,
-                                        UInt_t num_words)
-{
-  Bool_t lkDEBUG = kFALSE;
+Int_t VQwDetectorArray::ProcessEvBuffer(const ROCID_t roc_id, const BankID_t bank_id, UInt_t* buffer, UInt_t num_words) {
 
-  Int_t index = GetSubbankIndex(roc_id, bank_id);
+    Bool_t lkDEBUG=kFALSE;
 
-  if (index >= 0 && num_words > 0) {
+    Int_t index = GetSubbankIndex(roc_id,bank_id);
 
-    if (lkDEBUG) {
-      std::cout << "VQwDetectorArray::ProcessEvBuffer:  "
-                << "Begin processing ROC " << roc_id
-                << " and subbank " << bank_id
-                << " number of words = " << num_words
-                << std::endl;
-    }
+    if (index>=0 && num_words>0) {
 
-    // ------------------------------------------------------------
-    // Decode MOLLERADC 4 x 64 bit header words.
-    // buffer is UInt_t*, so each 64 bit word is stored as two
-    // 32 bit words.
-    // ------------------------------------------------------------
+        //  We want to process this ROC.  Begin looping through the data.
+        if (lkDEBUG)
+            std::cout << "VQwDetectorArray::ProcessEvBuffer:  "
+             << "Begin processing ROC" << roc_id
+             << " and subbank "<<bank_id
+             << " number of words="<<num_words<<std::endl;
 
-    auto read64_from_u32 = [](UInt_t* p)->ULong64_t {
-      ULong64_t hi = static_cast<ULong64_t>(p[1]);
-      ULong64_t lo = static_cast<ULong64_t>(p[0]);
-      return (hi << 32) | lo;
-    };
+        for (size_t i=0;i<fMainDetID.size();i++) {
 
-    ULong64_t header0 = 0;
-    ULong64_t header1 = 0;
-    ULong64_t header2 = 0;
-    ULong64_t header3 = 0;
+            if (fMainDetID[i].fSubbankIndex==index) {
 
-    UInt_t    header_id         = 0;
-    UInt_t    region_number     = 0;
-    UInt_t    header_num_words  = 0;
-    ULong64_t region_timestamp  = 0;
-    UInt_t    block_number      = 0;
-    ULong64_t packet_count      = 0;
-    ULong64_t tsamples          = 0;
+                if (fMainDetID[i].fTypeID == kQwIntegrationPMT) {
 
-    if (num_words >= 8) {
+                    if (lkDEBUG) {
 
-      header0 = read64_from_u32(buffer + 0);
-      header1 = read64_from_u32(buffer + 2);
-      header2 = read64_from_u32(buffer + 4);
-      header3 = read64_from_u32(buffer + 6);
+                        std::cout<<"found IntegrationPMT data for "<<fMainDetID[i].fdetectorname<<std::endl;
+                        std::cout<<"word left to read in this buffer:"<<num_words-fMainDetID[i].fWordInSubbank<<std::endl;
 
-      header_id        = static_cast<UInt_t>((header0 >> 56) & 0xFF);
-      region_number    = static_cast<UInt_t>((header0 >> 16) & 0xFFFFFFFF);
-      header_num_words = static_cast<UInt_t>( header0        & 0xFFFF);
+                    }
 
-      region_timestamp = header1;
+                    fIntegrationPMT[fMainDetID[i].fIndex].ProcessEvBuffer(&(buffer[fMainDetID[i].fWordInSubbank]),
+                     num_words-fMainDetID[i].fWordInSubbank);
 
-      block_number = static_cast<UInt_t>((header2 >> 60) & 0xF);
-      packet_count = static_cast<ULong64_t>(header2 & 0x0FFFFFFFFFFFFFFFULL);
+                }
 
-      tsamples = header3;
+            }
 
-      static int hdr_debug_counter = 0;
-      if (hdr_debug_counter < 20) {
-        std::cout << "[MOLLERADC HEADER DEBUG in VQwDetectorArray] "
-                  << "roc=" << roc_id
-                  << " bank=" << bank_id
-                  << " id=0x" << std::hex << header_id << std::dec
-                  << " region_number=" << region_number
-                  << " timestamp=" << region_timestamp
-                  << " header_num_words=" << header_num_words
-                  << " block_number=" << block_number
-                  << " packet_count=" << packet_count
-                  << " tsamples=" << tsamples
-                  << std::endl;
-      }
-      hdr_debug_counter++;
-
-    } else {
-
-      QwWarning << "VQwDetectorArray::ProcessEvBuffer: "
-                << "Not enough words to decode MOLLERADC header for ROC "
-                << roc_id << ", bank " << bank_id
-                << ". num_words = " << num_words
-                << QwLog::endl;
-    }
-
-    // ------------------------------------------------------------
-    // Process detector channels.
-    // ------------------------------------------------------------
-
-    for (size_t i = 0; i < fMainDetID.size(); i++) {
-
-      if (fMainDetID[i].fSubbankIndex == index) {
-
-        if (fMainDetID[i].fTypeID == kQwIntegrationPMT) {
-
-          if (lkDEBUG) {
-            std::cout << "found IntegrationPMT data for "
-                      << fMainDetID[i].fdetectorname
-                      << std::endl;
-
-            std::cout << "word left to read in this buffer: "
-                      << num_words - fMainDetID[i].fWordInSubbank
-                      << std::endl;
-          }
-
-          // Pass MOLLERADC header metadata into the channel wrapper
-          // before decoding the channel payload.
-          fIntegrationPMT[fMainDetID[i].fIndex].SetMollerADCHeaderData(
-            region_number,
-            region_timestamp,
-            header_num_words,
-            block_number,
-            packet_count,
-            tsamples
-          );
-          
-          std::cout << "[HEADER TRANSFER DEBUG] "
-          << fMainDetID[i].fdetectorname
-          << " region=" << region_number
-          << " timestamp=" << region_timestamp
-          << " packet=" << packet_count
-          << std::endl;
-
-          fIntegrationPMT[fMainDetID[i].fIndex].ProcessEvBuffer(
-            &(buffer[fMainDetID[i].fWordInSubbank]),
-            num_words - fMainDetID[i].fWordInSubbank
-          );
         }
-      }
+
     }
-  }
 
   return 0;
+
 }
 
 

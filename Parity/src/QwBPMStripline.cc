@@ -1372,6 +1372,40 @@ void QwBPMStripline<T>::SetSubElementCalibrationFactor(Int_t j, Double_t value)
 }
 
 
+//added this
+template<typename T>
+void QwBPMStripline<T>::SetMollerADCHeaderData(
+    UInt_t,
+    ULong64_t,
+    UInt_t,
+    UInt_t,
+    ULong64_t,
+    ULong64_t)
+{
+  // No-op for non-MollerADC channel types.
+}
+
+template<>
+void QwBPMStripline<QwMollerADC_Channel>::SetMollerADCHeaderData(
+    UInt_t region_number,
+    ULong64_t region_timestamp,
+    UInt_t header_num_words,
+    UInt_t header_block_number,
+    ULong64_t header_packet_count,
+    ULong64_t header_tsamples)
+{
+  for (size_t i = 0; i < fWire.size(); i++) {
+    fWire[i].SetMollerADCHeaderData(
+      region_number,
+      region_timestamp,
+      header_num_words,
+      header_block_number,
+      header_packet_count,
+      header_tsamples
+    );
+  }
+}
+
 template class QwBPMStripline<QwVQWK_Channel>;
 template class QwBPMStripline<QwSIS3801_Channel>;
 template class QwBPMStripline<QwSIS3801D24_Channel>;
