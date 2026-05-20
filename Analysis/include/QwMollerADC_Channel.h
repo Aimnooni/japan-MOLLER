@@ -318,7 +318,7 @@ private:
   static const Int_t  kWordsPerChannel; //no.of words per channel in the CODA buffer
   static const Int_t  kMaxChannels;     //no.of channels per module
   static const Int_t  kModuleHeaderWords;     //no.of words per header
-  static constexpr Int_t kMaxBlock=5; // maximum no.of blocks
+  static constexpr Int_t kMaxBlock=15; // maximum no.of blocks
   
   
   /*! \name ADC Calibration                    */

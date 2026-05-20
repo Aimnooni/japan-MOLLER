@@ -512,7 +512,7 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
 
   // ---------- Helpers for endian and packing ----------
 
-  auto bswap64 = [](uint64_t x)->uint64_t {
+/*  auto bswap64 = [](uint64_t x)->uint64_t {
 #if defined(__has_builtin)
 #  if __has_builtin(__builtin_bswap64)
     return __builtin_bswap64(x);
@@ -537,7 +537,7 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
            ((x & 0xFF00000000000000ULL) >> 56);
 #endif
   };
-
+*/
   // CODA packs each 64-bit word as big-endian into two 32-bit words:
   // p[1] = high 32 bits, p[0] = low 32 bits
   auto read_be64_from_u32 = [&](UInt_t* p)->uint64_t {
