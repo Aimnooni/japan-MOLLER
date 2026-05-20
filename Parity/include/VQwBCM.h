@@ -164,7 +164,14 @@ public:
   virtual VQwBCM& operator=  (const VQwBCM &value) =0;
   virtual VQwBCM& operator+= (const VQwBCM &value) =0;
   virtual VQwBCM& operator-= (const VQwBCM &value) =0;
-
+  //added this
+  virtual void SetMollerADCHeaderData(UInt_t,
+                                    ULong64_t,
+                                    UInt_t,
+                                    UInt_t,
+                                    ULong64_t,
+                                    ULong64_t) {}
+  
   // This one is for QwCombinedBCM (could be done differently)
   virtual void SetBCMForCombo(VQwBCM* bcm, Double_t weight, Double_t sumqw ) = 0;
 
