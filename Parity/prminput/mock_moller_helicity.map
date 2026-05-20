@@ -21,11 +21,11 @@
 
 
 !  HelicityDecodingMode=InputRegisterMode
-PatternPhase=8
+PatternPhase=4
 RandSeedBits=30
 
-ROC=12    !previously 31
-Bank=0xdec   ! previously 0x3103
+ROC=12   
+Bank=0xdec   
 
 ! module.type, module.num  chan.num, det.type, det.name
 !
