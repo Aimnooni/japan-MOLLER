@@ -369,9 +369,9 @@ private:
 
   /*! \name Event data members---Raw values */
   // @{
-  Int_t fBlock_raw[kMaxBlock];      ///< Array of the sub-block data as read from the module
-  Int_t fHardwareBlockSum_raw; ///< Module-based sum of the four sub-blocks as read from the module
-  Int_t fSoftwareBlockSum_raw; ///< Sum of the data in the four sub-blocks raw
+  Long64_t fBlock_raw[kMaxBlock];      ///< Array of the sub-block data as read from the module
+  Long64_t fHardwareBlockSum_raw; ///< Module-based sum of the four sub-blocks as read from the module
+  Long64_t fSoftwareBlockSum_raw; ///< Sum of the data in the four sub-blocks raw
   Long64_t fBlockSumSq_raw[kMaxBlock+1]; 
   Int_t fBlock_min[kMaxBlock+1];
   Int_t fBlock_max[kMaxBlock+1];

@@ -609,7 +609,7 @@ int blockindex = static_cast<int>(std::round(static_cast<double>(ch_sample_count
 
 
   fNumberOfSamples      = static_cast<UInt_t>(ch_sample_count_win);
-  fHardwareBlockSum_raw = static_cast<Long64_t>(ch_sum_win);
+  fHardwareBlockSum_raw = (ch_sum_win);
 
 
 if (blockindex < 0 || blockindex >= kMaxBlock) {
@@ -633,12 +633,12 @@ if (blockindex < 0 || blockindex >= kMaxBlock) {
 //  Figure out which subblock we're reading
 
   if (blockindex == 0) {
-  fSoftwareBlockSum_raw = static_cast<Int_t>(ch_sum_block);
+  fSoftwareBlockSum_raw = (ch_sum_block);
 } else {
-  fSoftwareBlockSum_raw += static_cast<Int_t>(ch_sum_block);
+  fSoftwareBlockSum_raw += (ch_sum_block);
 }
 
-fBlock_raw[blockindex]      = static_cast<Int_t>(ch_sum_block);
+fBlock_raw[blockindex]      = (ch_sum_block);
 fBlockSample[blockindex]    = static_cast<UInt_t>(ch_sample_count_block);
 fBlockSumSq_raw[blockindex] = static_cast<Long64_t>(ch_sumsq_block);
 fBlock_min[blockindex]      = ch_min_20;
