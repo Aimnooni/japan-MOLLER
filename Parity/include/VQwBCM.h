@@ -164,6 +164,13 @@ public:
   virtual VQwBCM& operator=  (const VQwBCM &value) =0;
   virtual VQwBCM& operator+= (const VQwBCM &value) =0;
   virtual VQwBCM& operator-= (const VQwBCM &value) =0;
+  //added this
+  virtual void SetMollerADCHeaderData(UInt_t region_number,
+                                    ULong64_t region_timestamp,
+                                    UInt_t header_num_words,
+                                    UInt_t header_block_number,
+                                    ULong64_t header_packet_count,
+                                    ULong64_t header_tsamples) {}
 
   // This one is for QwCombinedBCM (could be done differently)
   virtual void SetBCMForCombo(VQwBCM* bcm, Double_t weight, Double_t sumqw ) = 0;

@@ -1230,7 +1230,7 @@ if (num_words >= 8) {
 
   good_molleradc_header = (header_id == 0xAA);
 
-  static int beamline_header_debug = 0;
+ /* static int beamline_header_debug = 0;
   if (beamline_header_debug < 20) {
     std::cerr << "[QwBeamLine MOLLERADC HEADER DEBUG] "
               << "roc=" << roc_id
@@ -1246,6 +1246,7 @@ if (num_words >= 8) {
               << std::endl;
   }
   beamline_header_debug++;
+  */
 }
 
 
@@ -1331,16 +1332,16 @@ if (num_words >= 8) {
 		    std::cout<<"word left to read in this buffer:"<<num_words-fBeamDetectorID[i].fWordInSubbank<<std::endl;
 		  }
 //added this
-//	if (good_molleradc_header) {
-  //fBCM[fBeamDetectorID[i].fIndex].get()->SetMollerADCHeaderData(
-    //region_number,
-    //region_timestamp,
-    //header_num_words,
-   // block_number,
-   // packet_count,
-   // tsamples
-  //);
-//}	  
+	if (good_molleradc_header) {
+  fBCM[fBeamDetectorID[i].fIndex].get()->SetMollerADCHeaderData(
+    region_number,
+    region_timestamp,
+    header_num_words,
+    block_number,
+    packet_count,
+    tsamples
+  );
+}	  
 		  
 		  
 		fBCM[fBeamDetectorID[i].fIndex].get()->
