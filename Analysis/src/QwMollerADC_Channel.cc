@@ -518,13 +518,10 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
   }
 
   // ---------- Helpers for endian and packing ----------
-<<<<<<< HEAD
+
 
 /*  auto bswap64 = [](uint64_t x)->uint64_t {
-=======
-/*
-  auto bswap64 = [](uint64_t x)->uint64_t {
->>>>>>> analysis_test
+
 #if defined(__has_builtin)
 #  if __has_builtin(__builtin_bswap64)
     return __builtin_bswap64(x);
