@@ -518,7 +518,7 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
   }
 
   // ---------- Helpers for endian and packing ----------
-
+/*
   auto bswap64 = [](uint64_t x)->uint64_t {
 #if defined(__has_builtin)
 #  if __has_builtin(__builtin_bswap64)
@@ -544,7 +544,7 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer(UInt_t* buffer,
            ((x & 0xFF00000000000000ULL) >> 56);
 #endif
   };
-
+*/
   // CODA packs each 64-bit word as big-endian into two 32-bit words:
   // p[1] = high 32 bits, p[0] = low 32 bits
   auto read_be64_from_u32 = [&](UInt_t* p)->uint64_t {
@@ -1014,18 +1014,7 @@ void  QwMollerADC_Channel::ConstructBranch(TTree *tree, TString &prefix)
 
 void  QwMollerADC_Channel::FillTreeVector(QwRootTreeBranchVector& values) const
 {
-static int filltree_debug = 0;
 
-if (filltree_debug < 1000) {
-  if (TString(GetElementName()).Contains("bpm2i00")) {
-  std::cerr << "[FillTree bpm2i00 DEBUG] "
-            << GetElementName()
-            << " timestamp=" << fRegionTimestamp
-            << " packet=" << fHeaderPacketCount
-            << std::endl;
-            }
-}
-filltree_debug++;
 
   if (IsNameEmpty()) {
     //  This channel is not used, so skip filling the tree vector.
@@ -1339,15 +1328,7 @@ QwMollerADC_Channel& QwMollerADC_Channel::operator= (const QwMollerADC_Channel &
       this->fBlockM2[i]   = value.fBlockM2[i];
       this->fBlockRMS[i]  = value.fBlockRMS[i]; // I added this
     }
-    static int assign_debug = 0;
-if (assign_debug < 20) {
-  std::cerr << "[QwMollerADC operator= DEBUG] "
-            << value.GetElementName()
-            << " timestamp in=" << value.fRegionTimestamp
-            << " timestamp before=" << this->fRegionTimestamp
-            << std::endl;
-}
-assign_debug++;
+
     this->fHardwareBlockSum = value.fHardwareBlockSum;
     this->fHardwareBlockSumM2 = value.fHardwareBlockSumM2;
     this->fHardwareBlockSumError = value.fHardwareBlockSumError;
@@ -1361,12 +1342,7 @@ this->fHeaderNumWords    = value.fHeaderNumWords;
 this->fHeaderBlockNumber = value.fHeaderBlockNumber;
 this->fHeaderPacketCount = value.fHeaderPacketCount;
 this->fHeaderTSamples    = value.fHeaderTSamples;
-if (assign_debug < 20) {
-  std::cerr << "[QwMollerADC operator= AFTER] "
-            << this->GetElementName()
-            << " timestamp after=" << this->fRegionTimestamp
-            << std::endl;
-}
+
 
     if (this->fDataToSave == kRaw){
       for (Int_t i=0; i<fBlocksPerEvent; i++){

@@ -559,8 +559,7 @@ void  QwBPMStripline<T>::ProcessEvent()
   tmp5.Scale(-1.0*0.250014); // FIXME Does this correction factor need a BPM specific (i.e. BSEN) scaling factor? - It already includes BSENfactor^2 because it is made of post-BSENfactor scaled X and Y values, so lets assume its ok for now
   fEllipticity.Sum(fEllipticity,tmp5); // Correction to ellipticity (only 1st order correction)
   
-
-
+  PropagateMollerADCHeaderToDerived();
   return;
 }
 
@@ -1376,6 +1375,11 @@ void QwBPMStripline<T>::SetSubElementCalibrationFactor(Int_t j, Double_t value)
 
 //added this
 template<typename T>
+void QwBPMStripline<T>::PropagateMollerADCHeaderToDerived()
+{
+  // No-op for non-MollerADC stripline types.
+}
+template<typename T>
 void QwBPMStripline<T>::SetMollerADCHeaderData(
     UInt_t,
     ULong64_t,
@@ -1383,10 +1387,10 @@ void QwBPMStripline<T>::SetMollerADCHeaderData(
     UInt_t,
     ULong64_t,
     ULong64_t)
+    
 {
   // No-op for non-MollerADC channel types.
 }
-
 template<>
 void QwBPMStripline<QwMollerADC_Channel>::SetMollerADCHeaderData(
     UInt_t region_number,
@@ -1396,6 +1400,13 @@ void QwBPMStripline<QwMollerADC_Channel>::SetMollerADCHeaderData(
     ULong64_t header_packet_count,
     ULong64_t header_tsamples)
 {
+  fMollerRegionNumber = region_number;
+  fMollerRegionTimestamp = region_timestamp;
+  fMollerHeaderNumWords = header_num_words;
+  fMollerHeaderBlockNumber = header_block_number;
+  fMollerHeaderPacketCount = header_packet_count;
+  fMollerHeaderTSamples = header_tsamples;
+
   for (size_t i = 0; i < fWire.size(); i++) {
     fWire[i].SetMollerADCHeaderData(
       region_number,
@@ -1406,46 +1417,24 @@ void QwBPMStripline<QwMollerADC_Channel>::SetMollerADCHeaderData(
       header_tsamples
     );
   }
-
+}
+template<>
+void QwBPMStripline<QwMollerADC_Channel>::PropagateMollerADCHeaderToDerived()
+{
   for (Short_t i = kXAxis; i < kNumAxes; i++) {
-    fRelPos[i].SetMollerADCHeaderData(
-      region_number,
-      region_timestamp,
-      header_num_words,
-      header_block_number,
-      header_packet_count,
-      header_tsamples
-    );
+    fRelPos[i].SetMollerADCHeaderData(fMollerRegionNumber, fMollerRegionTimestamp,
+      fMollerHeaderNumWords, fMollerHeaderBlockNumber, fMollerHeaderPacketCount, fMollerHeaderTSamples);
 
-    fAbsPos[i].SetMollerADCHeaderData(
-      region_number,
-      region_timestamp,
-      header_num_words,
-      header_block_number,
-      header_packet_count,
-      header_tsamples
-    );
+    fAbsPos[i].SetMollerADCHeaderData(fMollerRegionNumber, fMollerRegionTimestamp,
+      fMollerHeaderNumWords, fMollerHeaderBlockNumber, fMollerHeaderPacketCount, fMollerHeaderTSamples);
   }
 
-  fEffectiveCharge.SetMollerADCHeaderData(
-    region_number,
-    region_timestamp,
-    header_num_words,
-    header_block_number,
-    header_packet_count,
-    header_tsamples
-  );
+  fEffectiveCharge.SetMollerADCHeaderData(fMollerRegionNumber, fMollerRegionTimestamp,
+    fMollerHeaderNumWords, fMollerHeaderBlockNumber, fMollerHeaderPacketCount, fMollerHeaderTSamples);
 
-  fEllipticity.SetMollerADCHeaderData(
-    region_number,
-    region_timestamp,
-    header_num_words,
-    header_block_number,
-    header_packet_count,
-    header_tsamples
-  );
+  fEllipticity.SetMollerADCHeaderData(fMollerRegionNumber, fMollerRegionTimestamp,
+    fMollerHeaderNumWords, fMollerHeaderBlockNumber, fMollerHeaderPacketCount, fMollerHeaderTSamples);
 }
-
 template class QwBPMStripline<QwVQWK_Channel>;
 template class QwBPMStripline<QwSIS3801_Channel>;
 template class QwBPMStripline<QwSIS3801D24_Channel>;

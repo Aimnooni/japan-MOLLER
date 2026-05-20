@@ -92,7 +92,7 @@ void SetMollerADCHeaderData(UInt_t region_number,
                             UInt_t header_block_number,
                             ULong64_t header_packet_count,
                             ULong64_t header_tsamples);
-                            
+void PropagateMollerADCHeaderToDerived();                            
                             
   void LoadChannelParameters(QwParameterFile &paramfile) override{
     for(Short_t i=0;i<4;i++){
@@ -214,7 +214,12 @@ void SetMollerADCHeaderData(UInt_t region_number,
   static const Double_t kRotationCorrection;
   static const TString subelement[4];
 
-
+UInt_t    fMollerRegionNumber = 0;
+ULong64_t fMollerRegionTimestamp = 0;
+UInt_t    fMollerHeaderNumWords = 0;
+UInt_t    fMollerHeaderBlockNumber = 0;
+ULong64_t fMollerHeaderPacketCount = 0;
+ULong64_t fMollerHeaderTSamples = 0;
 
  protected:
   std::array<T,4> fWire;//[4];
