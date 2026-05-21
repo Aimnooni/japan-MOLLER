@@ -950,11 +950,11 @@ values.push_back("header_tsamples", 'D');
 
   if (fDataToSave == kRaw) {
     if (bHw_sum_raw) {
-      values.push_back("hw_sum_raw", 'I');
+      values.push_back("hw_sum_raw", 'L');
     }
     if (bBlock_raw) {
 	for (int i = 0; i < fBlocksPerEvent; i++) {
-      values.push_back(Form("block%d_raw",i), 'I');
+      values.push_back(Form("block%d_raw",i), 'L');
 	}
      
     }
@@ -1070,12 +1070,12 @@ values.SetValue(index++, static_cast<Double_t>(this->fHeaderTSamples));
       {
         // hw_sum_raw
         if (bHw_sum_raw)
-          values.SetValue(index++, this->GetRawHardwareSum());
+          values.SetValue(index++, this->fHardwareBlockSum_raw);
 
         if (bBlock_raw) {
           for (Int_t i = 0; i < fBlocksPerEvent; i++) {
             // blocki_raw
-            values.SetValue(index++, this->GetRawBlockValue(i));
+            values.SetValue(index++, this->fBlock_raw[i]);
           }
         }
 
