@@ -1,3 +1,5 @@
+decode_mode = 1    
+
 NumberOfBlocks = 4
 sample_size = 7201
 Bank = 212
