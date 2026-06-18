@@ -2,5 +2,18 @@
 /adaqfs/home/moller-onl/users/ishola/japan-MOLLER/build/qwparity -r 838 --codafile-stem isb-test_alt_format_ --codafile-ext evio --config qwparity_simple.conf --data Datafiles/ --rootfiles RootFiles/ --detectors test_newdets.map
 
 ##########
-/adaqfs/home/moller-onl/users/ishola/japan-MOLLER/build/qwparity -r 1187 --codafile-stem moller_integrating_ --codafile-ext evio --config qwparity_simple.conf --data /cache/halla/mol
-ler12gev/integrating_data --rootfiles RootFiles/ --detectors test_newdets.map
+/adaqfs/home/moller-onl/users/ishola/japan-MOLLER/build/qwparity -r 1187 --codafile-stem moller_integrating_ --codafile-ext evio --config qwparity_simple.conf --data /cache/halla/moller12gev/integrating_data --rootfiles RootFiles/ --detectors test_newdets.map
+
+#########
+/adaqfs/home/moller-onl/users/ishola/japan-MOLLER/build/qwparity -r 1277 --codafile-stem moller_integrating_ --codafile-ext evio --config qwparity_simple.conf --data /adaqeb1/data1/integrating_daq --rootfiles RootFiles/ --detectors test_newdets.map
+
+########
+/adaqfs/home/moller-onl/users/ishola/japan-MOLLER/build/qwparity \
+-r 1142 \
+-s 1:1 \
+--codafile-stem moller_integrating_ \
+--codafile-ext evio \
+--config qwparity_simple.conf \
+--data /cache/halla/moller12gev/integrating_data \
+--rootfiles RootFiles/ \
+--detectors test_newdets.map

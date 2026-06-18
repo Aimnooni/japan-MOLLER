@@ -155,7 +155,7 @@ MollerADC, 0, 7,  bcm,  TQ11_R6
 MollerADC, 0, 8,  bcm,  TQ12_R1
 MollerADC, 0, 9,  bcm,  TQ12_R2
 MollerADC, 0, 10,  bcm,  TQ12_R3
-MollerADC, 0, 11,  bcm,  TQ012_R4
+MollerADC, 0, 11,  bcm,  TQ12_R4
 MollerADC, 0, 12,  bcm,  TQ12_R5l
 MollerADC, 0, 13,  bcm,  TQ12_R5c
 MollerADC, 0, 14,  bcm,  TQ12_R5r
