@@ -1,0 +1,3 @@
+Channel,Slope_ADC_per_Vpp,Intercept_ADC,SlopeError,InterceptError,Chi2,NDF
+tq05_r1,14876.8,-0.107927,59.8627,72.467,0.00323491,8
+tq05_r2,14880,-0.139647,59.8758,72.4827,0.0033031,8

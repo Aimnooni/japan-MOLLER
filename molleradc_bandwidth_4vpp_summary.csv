@@ -1,0 +1,1 @@
+Run,Frequency_Hz,Channel,FitAmplitude_ADC,FitPhase,FitOffset_ADC,MeasuredRMS_ADC,ExpectedRMS_FromFit_ADC,ResidualRMS_ADC,AmplitudeRatioTo10Hz,ExpectedInputAmplitude_V,ExpectedInputRMS_V,ExpectedInputPeakToPeak_V,ExpectedInputMean_V
