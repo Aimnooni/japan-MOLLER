@@ -52,6 +52,7 @@ class QwMollerADC_Channel: public VQwHardwareChannel, public MQwMockable {
  ******************************************************************/
  public:
   static Int_t GetBufferOffset(Int_t moduleindex, Int_t channelindex);
+  static void SetDecodeMode(UInt_t input);
   static void  PrintErrorCounterHead();
   static void  PrintErrorCounterTail();
 
@@ -317,12 +318,15 @@ private:
 
  private:
   static const Bool_t kDEBUG;
-  static const Int_t  kWordsPerChannel; //no.of words per channel in the CODA buffer
+
   static const Int_t  kMaxChannels;     //no.of channels per module
   static const Int_t  kModuleHeaderWords;     //no.of words per header
   static constexpr Int_t kMaxBlock=5; // maximum no.of blocks
-  static enum EDecodeMode  {kOldMock = 0, kNewReshuffled} fDecodeMode;
-  static void SetDecodeMode(int input){fDecodeMode=static_cast<EDecodeMode>(input);};
+  enum EDecodeMode {kOldMock = 0, kNewReshuffled = 1};
+  static EDecodeMode fDecodeMode;
+  static constexpr Int_t kOldMockWordsPerChannel = 26;
+  static constexpr Int_t kNewReshuffledWordsPerChannel = 14;
+  static Int_t GetWordsPerChannel();
   /*! \name ADC Calibration                    */
   // @{
   static const Double_t kMollerADC_VoltsPerBit;

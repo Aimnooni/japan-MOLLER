@@ -21,10 +21,9 @@
 
 const Bool_t QwMollerADC_Channel::kDEBUG = kFALSE;
 
-const Int_t  QwMollerADC_Channel::kWordsPerChannel = 14;
 const Int_t  QwMollerADC_Channel::kMaxChannels     = 16;
 const Int_t  QwMollerADC_Channel::kModuleHeaderWords = 8;
-QwMollerADC_Channel::EDecodeMode QwMollerADC_Channel::fDecodeMode = QwMollerADC_Channel::kNewReshuffled;
+QwMollerADC_Channel::EDecodeMode QwMollerADC_Channel::fDecodeMode = QwMollerADC_Channel::kOldMock;
 
 const Double_t QwMollerADC_Channel::kTimePerSample = (2.0/30.0) * Qw::us; //2.0 originally
 
@@ -58,7 +57,7 @@ Int_t QwMollerADC_Channel::GetBufferOffset(Int_t moduleindex, Int_t channelindex
     } else {
       offset = kModuleHeaderWords + 
         ( (moduleindex * kMaxChannels) + channelindex )
-        * kWordsPerChannel;
+        * GetWordsPerChannel();
     }
     return offset;
   }
@@ -166,7 +165,7 @@ void QwMollerADC_Channel::InitializeChannel(TString name, TString datatosave)
 {
   SetElementName(name);
   SetDataToSave(datatosave);
-  SetNumberOfDataWords(kWordsPerChannel);
+  SetNumberOfDataWords(GetWordsPerChannel()); //was formerly SetNumberOfDataWords(kWordsPerChannel);
   SetNumberOfSubElements(kMaxBlock+1); 
   
   kFoundPedestal = 0;
@@ -238,10 +237,28 @@ void QwMollerADC_Channel::InitializeChannel(TString subsystem, TString instrumen
   //PrintInfo();
 }
 
+Int_t QwMollerADC_Channel::GetWordsPerChannel()
+{
+  switch (fDecodeMode) {
+    case kOldMock:
+      return kOldMockWordsPerChannel;
+    case kNewReshuffled:
+      return kNewReshuffledWordsPerChannel;
+  }
+
+  return kNewReshuffledWordsPerChannel;
+}
+
+void QwMollerADC_Channel::SetDecodeMode(UInt_t input)
+{
+  fDecodeMode = static_cast<EDecodeMode>(input);
+}
+
 void QwMollerADC_Channel::LoadChannelParameters(QwParameterFile &paramfile){
   UInt_t value = 0;
-  if (fDecodeMode==kOldMock && paramfile.ReturnValue("decode_mode",value)){
+  if (paramfile.ReturnValue("decode_mode", value)){
      SetDecodeMode(value);
+     SetNumberOfDataWords(GetWordsPerChannel());
      }
 
   if (paramfile.ReturnValue("sample_size", value)) {
@@ -446,7 +463,7 @@ void QwMollerADC_Channel::SetRawEventData(){
 
 void QwMollerADC_Channel::EncodeEventData(std::vector<UInt_t> &buffer)
 {
-  Long_t localbuf[kWordsPerChannel] = {0};
+  Long_t localbuf[kOldMockWordsPerChannel] = {0};
 
   if (IsNameEmpty()) {
     //  This channel is not used, but is present in the data stream.
@@ -472,7 +489,7 @@ void QwMollerADC_Channel::EncodeEventData(std::vector<UInt_t> &buffer)
     localbuf[25] = (fNumberOfSamples << 16 & 0xFFFF0000)
                 | (fSequenceNumber  << 8  & 0x0000FF00);
 
-    for (Int_t i = 0; i < kWordsPerChannel; i++){
+    for (Int_t i = 0; i < kOldMockWordsPerChannel; i++){
         buffer.push_back(localbuf[i]);  
       }
   }
@@ -493,10 +510,10 @@ return retval;
 Int_t QwMollerADC_Channel::ProcessEvBuffer_oldmock(UInt_t* buffer, UInt_t num_words_left, UInt_t index)
 {
   UInt_t words_read = 0;
-  UInt_t raw_u32[kWordsPerChannel] = {0};
+  UInt_t raw_u32[kOldMockWordsPerChannel] = {0};
   // The conversion from UInt_t to Double_t discards the sign, so we need an intermediate
   // static_cast from UInt_t to Int_t.
-  Int_t raw_i32[kWordsPerChannel] = {0};
+  Int_t raw_i32[kOldMockWordsPerChannel] = {0};
 
   if (IsNameEmpty()){
     return  fNumberOfDataWords;
@@ -514,7 +531,7 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer_oldmock(UInt_t* buffer, UInt_t num_wo
 
 //copy local channel words
 
-   for (Int_t i=0; i<kWordsPerChannel; i++){
+   for (Int_t i=0; i<kOldMockWordsPerChannel; i++){
         raw_u32[i] = buffer[i];
         raw_i32[i] = static_cast<Int_t>(raw_u32[i]);
       }
@@ -576,7 +593,7 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer_newreshuffled(UInt_t* buffer,
   //static int debug_event_counter = 0;
 
   // Each channel now has 7×64-bit words = 14×32-bit words
-  const UInt_t need_u32 = kWordsPerChannel; // = 14
+  const UInt_t need_u32 = kNewReshuffledWordsPerChannel; // = 14
 
   // If this channel slot is unused, just skip the words
   if (IsNameEmpty()) {
@@ -594,7 +611,7 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer_newreshuffled(UInt_t* buffer,
 
   // ---------- Helpers for endian and packing ----------
 
-  auto bswap64 = [](uint64_t x)->uint64_t {
+/*  auto bswap64 = [](uint64_t x)->uint64_t {
 #if defined(__has_builtin)
 #  if __has_builtin(__builtin_bswap64)
     return __builtin_bswap64(x);
@@ -619,6 +636,7 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer_newreshuffled(UInt_t* buffer,
            ((x & 0xFF00000000000000ULL) >> 56);
 #endif
   };
+*/
 
   // CODA packs each 64-bit word as big-endian into two 32-bit words:
   // p[1] = high 32 bits, p[0] = low 32 bits

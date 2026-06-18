@@ -1,6 +1,6 @@
 NumberOfBlocks = 4
 sample_size = 7201
-decode_mode = 1    #This is for the reshuffled data in the mollerADC
+decode_mode = 1    # decode_mode =1 is for reshuffled while decode_mode =0 is for old_mock 
 
 ROC = 13
 BANK = 212
