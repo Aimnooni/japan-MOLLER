@@ -1,4 +1,6 @@
 ! Helicity Decoder signals input to intadcse08 and intadcse09  
+decode_mode = 1
+
 
 Bank = 212
 sample_size = 7201

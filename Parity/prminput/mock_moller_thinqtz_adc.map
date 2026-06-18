@@ -1,3 +1,6 @@
+decode_mode = 1
+
+
 ROC=6
 Bank=0x6110
 sample_size=15000
