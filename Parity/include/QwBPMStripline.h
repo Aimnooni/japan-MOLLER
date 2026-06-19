@@ -100,6 +100,11 @@ void PropagateMollerADCHeaderToDerived();
     }
     fAbsPos[0].LoadChannelParameters(paramfile);
     fAbsPos[1].LoadChannelParameters(paramfile);
+    for(Short_t i=0;i<2;i++){
+      fRelPos[i].CopyParameters(&fAbsPos[i]);
+    }
+    fEffectiveCharge.CopyParameters(&fAbsPos[0]);
+    fEllipticity.CopyParameters(&fAbsPos[0]);
   }
 
   Int_t   ProcessEvBuffer(UInt_t* buffer,

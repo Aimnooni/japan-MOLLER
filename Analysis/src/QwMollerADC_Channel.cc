@@ -44,19 +44,20 @@ const Double_t QwMollerADC_Channel::kMollerADC_VoltsPerBit = (20./(1<<18));
  */
 Int_t QwMollerADC_Channel::GetBufferOffset(Int_t moduleindex, Int_t channelindex){
     Int_t offset = -1;
+    const Int_t channels_per_module = GetChannelsPerModule();
     if (moduleindex<0 ){
       QwError << "QwMollerADC_Channel::GetBufferOffset:  Invalid module index,"
               << moduleindex
               << ".  Must be zero or greater."
               << QwLog::endl;
-    } else if (channelindex<0 || channelindex>kMaxChannels){
+    } else if (channelindex<0 || channelindex>=channels_per_module){
       QwError << "QwMollerADC_Channel::GetBufferOffset:  Invalid channel index,"
               << channelindex
-              << ".  Must be in range [0," << kMaxChannels << "]."
+              << ".  Must be in range [0," << channels_per_module - 1 << "]."
               << QwLog::endl;
     } else {
-      offset = kModuleHeaderWords + 
-        ( (moduleindex * kMaxChannels) + channelindex )
+      offset = GetModuleHeaderWords()
+        + ( (moduleindex * channels_per_module) + channelindex )
         * GetWordsPerChannel();
     }
     return offset;
@@ -72,6 +73,17 @@ Int_t QwMollerADC_Channel::ApplyHWChecks()
 
     if (bDEBUG)
       QwWarning<<" QwQWVK_Channel "<<GetElementName()<<"  "<<GetNumberOfSamples()<<QwLog::endl;
+
+    if (fDecodeMode == kOldMock) {
+      // The old mock payload does not provide reliable HW/SW-sum equality or
+      // sequence metadata.  Keep only the basic missing-data check so mock
+      // detector asymmetries are not rejected by checks they cannot satisfy.
+      fErrorFlag = 0;
+      if (GetRawHardwareSum()==0) {
+        fErrorFlag|=kErrorFlag_ZeroHW;
+      }
+      return fErrorFlag;
+    }
 
     // Sample size check
     bStatus = MatchNumberOfSamples(fNumberOfSamples_map);//compare the default sample size with no.of samples read by the module
@@ -174,7 +186,7 @@ void QwMollerADC_Channel::InitializeChannel(TString name, TString datatosave)
   fPedestal            = 0.0;
   fCalibrationFactor   = 1.0;
 
-  fBlocksPerEvent      = kMaxBlock;
+  fBlocksPerEvent      = GetDefaultBlocksPerEvent();
   
 
 
@@ -255,6 +267,42 @@ Int_t QwMollerADC_Channel::GetWordsPerChannel()
   return kNewReshuffledWordsPerChannel;
 }
 
+Int_t QwMollerADC_Channel::GetChannelsPerModule()
+{
+  switch (fDecodeMode) {
+    case kOldMock:
+      return kOldMockChannelsPerModule;
+    case kNewReshuffled:
+      return kNewReshuffledChannelsPerModule;
+  }
+
+  return kNewReshuffledChannelsPerModule;
+}
+
+Int_t QwMollerADC_Channel::GetModuleHeaderWords()
+{
+  switch (fDecodeMode) {
+    case kOldMock:
+      return 0;
+    case kNewReshuffled:
+      return kModuleHeaderWords;
+  }
+
+  return kModuleHeaderWords;
+}
+
+Int_t QwMollerADC_Channel::GetDefaultBlocksPerEvent()
+{
+  switch (fDecodeMode) {
+    case kOldMock:
+      return kOldMockDefaultBlocks;
+    case kNewReshuffled:
+      return kNewReshuffledDefaultBlocks;
+  }
+
+  return kNewReshuffledDefaultBlocks;
+}
+
 void QwMollerADC_Channel::SetDecodeMode(UInt_t input)
 {
   fDecodeMode = static_cast<EDecodeMode>(input);
@@ -278,7 +326,8 @@ void QwMollerADC_Channel::LoadChannelParameters(QwParameterFile &paramfile){
 
   UInt_t NumberOfBlocks = 0;
 
-  if (paramfile.ReturnValue("numberofblocks", NumberOfBlocks)) {
+  if (paramfile.ReturnValue("NumberOfBlocks", NumberOfBlocks)
+      || paramfile.ReturnValue("numberofblocks", NumberOfBlocks)) {
     if (NumberOfBlocks > static_cast<UInt_t>(kMaxBlock)) {
       QwWarning << "MollerADC Channel " << GetElementName()
                 << ": NumberOfBlocks (" << NumberOfBlocks
@@ -287,14 +336,22 @@ void QwMollerADC_Channel::LoadChannelParameters(QwParameterFile &paramfile){
                 << QwLog::endl;
       NumberOfBlocks = kMaxBlock;
     }
+    if (NumberOfBlocks == 0) {
+      QwWarning << "MollerADC Channel " << GetElementName()
+                << ": NumberOfBlocks is zero. Defaulting to "
+                << GetDefaultBlocksPerEvent() << "."
+                << QwLog::endl;
+      NumberOfBlocks = GetDefaultBlocksPerEvent();
+    }
     fBlocksPerEvent = NumberOfBlocks;
   } else {
     QwWarning << "MollerADC Channel "
               << GetElementName()
-              << " cannot set NumberOfBlocks. Defaulting to 4."
+              << " cannot set NumberOfBlocks. Defaulting to "
+              << GetDefaultBlocksPerEvent() << "."
               << QwLog::endl;
 
-    fBlocksPerEvent = 4;
+    fBlocksPerEvent = GetDefaultBlocksPerEvent();
   }
 };
 
@@ -530,6 +587,8 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer_oldmock(UInt_t* buffer, UInt_t num_wo
     {
    std::cerr << "QwMollerADC_Channel::ProcessEvBuffer_oldmock: "
 	     << "Not enough words for old mock MOLLER ADC channel "
+       << GetElementName()
+       << " "
 	     << "(need " << fNumberOfDataWords
  	     << ", have " << num_words_left << ")!"
  	     << std::endl;
@@ -576,6 +635,14 @@ Int_t QwMollerADC_Channel::ProcessEvBuffer_oldmock(UInt_t* buffer, UInt_t num_wo
 
   fSequenceNumber  = (ch_misc >> 8)  & 0xFF;
   fNumberOfSamples = (ch_misc >> 16) & 0xFFFF;
+  if (fNumberOfSamples == 0) {
+    fNumberOfSamples = fNumberOfSamples_map;
+  }
+  const UInt_t block_samples =
+    (fBlocksPerEvent > 0) ? fNumberOfSamples / fBlocksPerEvent : 0;
+  for (Int_t blockindex = 0; blockindex < fBlocksPerEvent; blockindex++) {
+    fBlockSample[blockindex] = block_samples;
+  }
 
   words_read = fNumberOfDataWords;
 
@@ -986,35 +1053,40 @@ void  QwMollerADC_Channel::ConstructBranchAndVector(TTree *tree, TString &prefix
   bNum_samples = gQwHists.MatchVQWKElementFromList(GetSubsystemName().Data(), GetModuleType().Data(), "num_samples");
   bDevice_Error_Code = gQwHists.MatchVQWKElementFromList(GetSubsystemName().Data(), GetModuleType().Data(), "Device_Error_Code");
   bSequence_number = gQwHists.MatchVQWKElementFromList(GetSubsystemName().Data(), GetModuleType().Data(), "sequence_number");
+  const Bool_t save_new_decoder_fields = (fDecodeMode == kNewReshuffled);
 
   if (bHw_sum) {
-  values.push_back("hw_sum", 'D');
-  values.push_back("hw_sum_rms", 'D');
-  if (fDataToSave == kMoments) {
-    values.push_back("hw_sum_m2", 'D');
-    values.push_back("hw_sum_err", 'D');
+    values.push_back("hw_sum", 'D');
+    if (save_new_decoder_fields) {
+      values.push_back("hw_sum_rms", 'D');
+    }
+    if (fDataToSave == kMoments) {
+      values.push_back("hw_sum_m2", 'D');
+      values.push_back("hw_sum_err", 'D');
+    }
   }
-}
 
   if (bBlock) {
-  for (int i = 0; i < fBlocksPerEvent; i++) {
-    values.push_back(Form("block%d", i), 'D');
-    values.push_back(Form("block%d_rms", i), 'D');
+    for (int i = 0; i < fBlocksPerEvent; i++) {
+      values.push_back(Form("block%d", i), 'D');
+      if (save_new_decoder_fields) {
+        values.push_back(Form("block%d_rms", i), 'D');
+      }
+    }
   }
-}
 
   if (bNum_samples) {
     values.push_back("num_samples", 'i');
   }
 
-//added this
-// MollerADC region/header metadata
-  values.push_back("region_number", 'D');
-values.push_back("region_timestamp", 'D');
-values.push_back("header_num_words", 'D');
-values.push_back("header_block_number", 'D');
-values.push_back("header_packet_count", 'D');
-values.push_back("header_tsamples", 'D');
+  if (save_new_decoder_fields) {
+    values.push_back("region_number", 'D');
+    values.push_back("region_timestamp", 'D');
+    values.push_back("header_num_words", 'D');
+    values.push_back("header_block_number", 'D');
+    values.push_back("header_packet_count", 'D');
+    values.push_back("header_tsamples", 'D');
+  }
 
   if (bDevice_Error_Code) {
     values.push_back("Device_Error_Code", 'i');
@@ -1022,11 +1094,11 @@ values.push_back("header_tsamples", 'D');
 
   if (fDataToSave == kRaw) {
     if (bHw_sum_raw) {
-      values.push_back("hw_sum_raw", 'L');
+      values.push_back("hw_sum_raw", save_new_decoder_fields ? 'L' : 'I');
     }
     if (bBlock_raw) {
 	for (int i = 0; i < fBlocksPerEvent; i++) {
-      values.push_back(Form("block%d_raw",i), 'L');
+      values.push_back(Form("block%d_raw",i), save_new_decoder_fields ? 'L' : 'I');
 	}
      
     }
@@ -1104,35 +1176,41 @@ void  QwMollerADC_Channel::FillTreeVector(QwRootTreeBranchVector& values) const
   } else {
 
     UInt_t index = fTreeArrayIndex;
+    const Bool_t save_new_decoder_fields = (fDecodeMode == kNewReshuffled);
 
     // hw_sum
     if (bHw_sum) {
-  values.SetValue(index++, this->GetHardwareSum());
-  values.SetValue(index++, this->GetHardwareSumRMS());
-  if (fDataToSave == kMoments) {
-    values.SetValue(index++, this->GetHardwareSumM2());
-    values.SetValue(index++, this->GetHardwareSumError());
-  }
-}
+      values.SetValue(index++, this->GetHardwareSum());
+      if (save_new_decoder_fields) {
+        values.SetValue(index++, this->GetHardwareSumRMS());
+      }
+      if (fDataToSave == kMoments) {
+        values.SetValue(index++, this->GetHardwareSumM2());
+        values.SetValue(index++, this->GetHardwareSumError());
+      }
+    }
 
     if (bBlock) {
-  for (Int_t i = 0; i < fBlocksPerEvent; i++) {
-    values.SetValue(index++, this->GetBlockValue(i));
-    values.SetValue(index++, this->GetBlockRMS(i));
-  }
-}
+      for (Int_t i = 0; i < fBlocksPerEvent; i++) {
+        values.SetValue(index++, this->GetBlockValue(i));
+        if (save_new_decoder_fields) {
+          values.SetValue(index++, this->GetBlockRMS(i));
+        }
+      }
+    }
 
     // num_samples
     if (bNum_samples)
       values.SetValue(index++, (fDataToSave == kMoments)? this->fGoodEventCount: this->fNumberOfSamples);
     
-    //added this
-    values.SetValue(index++, static_cast<Double_t>(this->fRegionNumber));
-values.SetValue(index++, static_cast<Double_t>(this->fRegionTimestamp));
-values.SetValue(index++, static_cast<Double_t>(this->fHeaderNumWords));
-values.SetValue(index++, static_cast<Double_t>(this->fHeaderBlockNumber));
-values.SetValue(index++, static_cast<Double_t>(this->fHeaderPacketCount));
-values.SetValue(index++, static_cast<Double_t>(this->fHeaderTSamples));
+    if (save_new_decoder_fields) {
+      values.SetValue(index++, static_cast<Double_t>(this->fRegionNumber));
+      values.SetValue(index++, static_cast<Double_t>(this->fRegionTimestamp));
+      values.SetValue(index++, static_cast<Double_t>(this->fHeaderNumWords));
+      values.SetValue(index++, static_cast<Double_t>(this->fHeaderBlockNumber));
+      values.SetValue(index++, static_cast<Double_t>(this->fHeaderPacketCount));
+      values.SetValue(index++, static_cast<Double_t>(this->fHeaderTSamples));
+    }
     
     // Device_Error_Code
     if (bDevice_Error_Code)
@@ -1141,13 +1219,22 @@ values.SetValue(index++, static_cast<Double_t>(this->fHeaderTSamples));
     if (fDataToSave == kRaw)
       {
         // hw_sum_raw
-        if (bHw_sum_raw)
-          values.SetValue(index++, this->fHardwareBlockSum_raw);
+        if (bHw_sum_raw) {
+          if (save_new_decoder_fields) {
+            values.SetValue(index++, this->fHardwareBlockSum_raw);
+          } else {
+            values.SetValue(index++, this->GetRawHardwareSum());
+          }
+        }
 
         if (bBlock_raw) {
           for (Int_t i = 0; i < fBlocksPerEvent; i++) {
             // blocki_raw
-            values.SetValue(index++, this->fBlock_raw[i]);
+            if (save_new_decoder_fields) {
+              values.SetValue(index++, this->fBlock_raw[i]);
+            } else {
+              values.SetValue(index++, this->GetRawBlockValue(i));
+            }
           }
         }
 
@@ -2295,6 +2382,7 @@ void QwMollerADC_Channel::CopyParameters(const VQwHardwareChannel* valueptr){
     const QwMollerADC_Channel* tmpptr;
   tmpptr = dynamic_cast<const QwMollerADC_Channel*>(valueptr);
   if (tmpptr!=NULL){
+    fBlocksPerEvent = tmpptr->fBlocksPerEvent;
     fNumberOfSamples = tmpptr->fNumberOfSamples;
     fNumberOfSamples_map = tmpptr->fNumberOfSamples_map;
     fMockGaussianSigma = tmpptr->fMockGaussianSigma;

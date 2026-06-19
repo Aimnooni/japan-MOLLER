@@ -354,9 +354,16 @@ private:
   static constexpr Int_t kMaxBlock=15; // maximum no.of blocks
   enum EDecodeMode {kOldMock = 0, kNewReshuffled = 1};
   static EDecodeMode fDecodeMode;
-  static constexpr Int_t kOldMockWordsPerChannel = 26;
+  static constexpr Int_t kOldMockChannelsPerModule = 8;
+  static constexpr Int_t kNewReshuffledChannelsPerModule = 16;
+  static constexpr Int_t kOldMockDefaultBlocks = 4;
+  static constexpr Int_t kNewReshuffledDefaultBlocks = kMaxBlock;
+  static constexpr Int_t kOldMockWordsPerChannel = 30;
   static constexpr Int_t kNewReshuffledWordsPerChannel = 14;
   static Int_t GetWordsPerChannel();
+  static Int_t GetChannelsPerModule();
+  static Int_t GetModuleHeaderWords();
+  static Int_t GetDefaultBlocksPerEvent();
 
   /*! \name ADC Calibration                    */
   // @{
