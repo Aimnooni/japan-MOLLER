@@ -1,5 +1,9 @@
-#ifndef __MQWHISTOGRAMS__
-#define __MQWHISTOGRAMS__
+/*!
+ * \file   MQwHistograms.h
+ * \brief  Mix-in class for histogram management functionality
+ */
+
+#pragma once
 
 // System headers
 #include <vector>
@@ -10,6 +14,15 @@
 // Qweak headers
 #include "QwLog.h"
 
+/**
+ * \class MQwHistograms
+ * \ingroup QwAnalysis
+ * \brief Mix-in class providing histogram management functionality
+ *
+ * Provides a common interface for data elements that need to create
+ * and fill ROOT histograms. Manages histogram pointers and provides
+ * utilities for histogram registration and sharing between objects.
+ */
 class MQwHistograms {
 
     /// Regular pointers for the histograms
@@ -52,6 +65,7 @@ class MQwHistograms {
     /// Register a histogram
     void AddHistogram(TH1* h) {
       fHistograms.push_back(TH1_ptr(h));
+	  fHistograms.back()->SetBuffer(1000);
     }
 
   public:
@@ -61,5 +75,3 @@ class MQwHistograms {
     }
 
 }; // class MQwHistograms
-
-#endif // __MQWHISTOGRAMS__

@@ -2,7 +2,7 @@
 
  \file QwParity.cc
 
- \brief main(...) function for the qwanalysis executable
+ \brief main(...) function for the qwparity executable
 
 *//*-------------------------------------------------------------------------*/
 
@@ -39,6 +39,8 @@
 #include "QwCombinerSubsystem.h"
 #include "QwPromptSummary.h"
 #include "QwCorrelator.h"
+#include "QwCorrelatorNew.h"
+#include "GrandCorrelator.h"
 #include "LRBCorrector.h"
 #include "QwExtractor.h"
 #include "QwDataHandlerArray.h"
@@ -49,7 +51,6 @@
 #include "QwFakeHelicity.h"
 #include "QwBeamLine.h"
 #include "QwBeamMod.h"
-#include "QwIntegratedRaster.h"
 
 // Valgrind headers
 #if __has_include(<valgrind/callgrind.h>)
@@ -58,6 +59,9 @@
 
 Int_t main(Int_t argc, Char_t* argv[])
 {
+  ///  Enable implicit multi-threading in e.g. TTree::Fill
+  ROOT::EnableImplicitMT();
+
   ///  Define the command line options
   DefineOptionsParity(gQwOptions);
 
@@ -138,13 +142,13 @@ Int_t main(Int_t argc, Char_t* argv[])
     //    TString name = "EvtCorrector";
     //    QwCombinerSubsystem corrector_sub(gQwOptions, detectors, name);
     //    detectors.push_back(corrector_sub.GetSharedPointerToStaticObject());
-    
+
     /// Create the helicity pattern
     //    Instead of having run_label in the constructor of helicitypattern, it might
     //    make since to have it be an option for use globally
     QwHelicityPattern helicitypattern(detectors,run_label);
     helicitypattern.ProcessOptions(gQwOptions);
-    
+
     ///  Create the event ring with the subsystem array
     QwEventRing eventring(gQwOptions,detectors);
     //  Make a copy of the detectors object to hold the
@@ -218,14 +222,12 @@ Int_t main(Int_t argc, Char_t* argv[])
 
     // Construct RNTuple fields if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-    if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-      treerootfile->ConstructNTupleFields("evt", "MPS event data RNTuple", ringoutput);
-      treerootfile->ConstructNTupleFields("mul", "Helicity event data RNTuple", helicitypattern);
-      burstrootfile->ConstructNTupleFields("pr_yield", "Pair yield RNTuple", helicitypattern.GetPairYield(),"yield_");
-      burstrootfile->ConstructNTupleFields("pr_asym", "Pair asymmetry RNTuple", helicitypattern.GetPairAsymmetry(),"asym_");
-      treerootfile->ConstructNTupleFields("slow", "EPICS and slow control RNTuple", epicsevent);
-      burstrootfile->ConstructNTupleFields("burst", "Burst level data RNTuple", patternsum_per_burst, "|stat");
-    }
+    treerootfile->ConstructNTupleFields("evt", "MPS event data RNTuple", ringoutput);
+    treerootfile->ConstructNTupleFields("mul", "Helicity event data RNTuple", helicitypattern);
+    burstrootfile->ConstructNTupleFields("pr_yield", "Pair yield RNTuple", helicitypattern.GetPairYield(),"yield_");
+    burstrootfile->ConstructNTupleFields("pr_asym", "Pair asymmetry RNTuple", helicitypattern.GetPairAsymmetry(),"asym_");
+    treerootfile->ConstructNTupleFields("slow", "EPICS and slow control RNTuple", epicsevent);
+    burstrootfile->ConstructNTupleFields("burst", "Burst level data RNTuple", patternsum_per_burst, "|stat");
 #endif
 
     historootfile->ConstructHistograms("evt_histo",   datahandlerarray_evt);
@@ -238,11 +240,9 @@ Int_t main(Int_t argc, Char_t* argv[])
 
     // Construct RNTuple fields for data handlers if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-    if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-      datahandlerarray_evt.ConstructNTupleFields(treerootfile, "evt_");
-      datahandlerarray_mul.ConstructNTupleFields(treerootfile);
-      datahandlerarray_burst.ConstructNTupleFields(burstrootfile, "burst_", "|stat");
-    }
+    datahandlerarray_evt.ConstructNTupleFields(treerootfile, "evt_");
+    datahandlerarray_mul.ConstructNTupleFields(treerootfile);
+    datahandlerarray_burst.ConstructNTupleFields(burstrootfile, "burst_", "|stat");
 #endif
 
     treerootfile->ConstructTreeBranches("evts", "Running sum tree", eventsum, "|stat");
@@ -251,11 +251,9 @@ Int_t main(Int_t argc, Char_t* argv[])
 
     // Construct RNTuple fields for additional data if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-    if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-      treerootfile->ConstructNTupleFields("evts", "Running sum RNTuple", eventsum, "|stat");
-      treerootfile->ConstructNTupleFields("muls", "Running sum RNTuple", patternsum, "|stat");
-      burstrootfile->ConstructNTupleFields("bursts", "Burst running sum RNTuple", burstsum, "|stat");
-    }
+    treerootfile->ConstructNTupleFields("evts", "Running sum RNTuple", eventsum, "|stat");
+    treerootfile->ConstructNTupleFields("muls", "Running sum RNTuple", patternsum, "|stat");
+    burstrootfile->ConstructNTupleFields("bursts", "Burst running sum RNTuple", burstsum, "|stat");
 #endif
 
     // Summarize the ROOT file structure
@@ -274,15 +272,15 @@ Int_t main(Int_t argc, Char_t* argv[])
 
 
     //  Load the blinder seed from a random number generator for online mode
-    if (eventbuffer.IsOnline() ){      
+    if (eventbuffer.IsOnline() ){
       helicitypattern.UpdateBlinder();//this routine will call update blinder mechanism using a random number
     }else{
       //  Load the blinder seed from the database for this runlet.
 #ifdef __USE_DATABASE__
       helicitypattern.UpdateBlinder(&database);
-#endif // __USE_DATABASE__      
+#endif // __USE_DATABASE__
     }
-    
+
 
     //  Find the first EPICS event and try to initialize
     //  the blinder, but only for disk files, not online.
@@ -329,16 +327,14 @@ Int_t main(Int_t argc, Char_t* argv[])
 	if (epicsevent.HasDataLoaded()){
 	  epicsevent.CalculateRunningValues();
 	  helicitypattern.UpdateBlinder(epicsevent);
-	
+
 	  treerootfile->FillTreeBranches(epicsevent);
 	  treerootfile->FillTree("slow");
-	  
+
 	  // Fill RNTuple if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-	  if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-	    treerootfile->FillNTupleFields(epicsevent);
-	    treerootfile->FillNTuple("slow");
-	  }
+	  treerootfile->FillNTupleFields(epicsevent);
+	  treerootfile->FillNTuple("slow");
 #endif
 	}
       }
@@ -357,7 +353,7 @@ Int_t main(Int_t argc, Char_t* argv[])
 
       // The event pass the event cut constraints
       if (detectors.ApplySingleEventCuts()) {
-	
+
         // Add event to the ring
         eventring.push(detectors);
 
@@ -379,10 +375,8 @@ Int_t main(Int_t argc, Char_t* argv[])
 
 	  // Fill RNTuple if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-	  if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-	    treerootfile->FillNTupleFields(ringoutput);
-	    treerootfile->FillNTuple("evt");
-	  }
+	  treerootfile->FillNTupleFields(ringoutput);
+	  treerootfile->FillNTuple("evt");
 #endif
 
 	  // Process data handlers
@@ -396,9 +390,7 @@ Int_t main(Int_t argc, Char_t* argv[])
 
           // Fill data handler RNTuple fields if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-          if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-            datahandlerarray_evt.FillNTupleFields(treerootfile);
-          }
+          datahandlerarray_evt.FillNTupleFields(treerootfile);
 #endif
 
           // Load the event into the helicity pattern
@@ -408,21 +400,19 @@ Int_t main(Int_t argc, Char_t* argv[])
             patternsum.AccumulatePairRunningSum(helicitypattern);
 
 	    // Fill pair tree branches
-	    treerootfile->FillTreeBranches(helicitypattern.GetPairYield());
-	    treerootfile->FillTreeBranches(helicitypattern.GetPairAsymmetry());
-	    treerootfile->FillTreeBranches(helicitypattern.GetPairDifference());
-	    treerootfile->FillTree("pr");
-	    
+	    burstrootfile->FillTreeBranches(helicitypattern.GetPairYield());
+	    burstrootfile->FillTreeBranches(helicitypattern.GetPairAsymmetry());
+	    burstrootfile->FillTreeBranches(helicitypattern.GetPairDifference());
+	    burstrootfile->FillTree("pr");
+
 	    // Fill pair RNTuples if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-	    if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-	      burstrootfile->FillNTupleFields("pr_yield", helicitypattern.GetPairYield());
-	      burstrootfile->FillNTupleFields("pr_asym", helicitypattern.GetPairAsymmetry());
-	      burstrootfile->FillNTuple("pr_yield");
-	      burstrootfile->FillNTuple("pr_asym");
-	    }
+	    burstrootfile->FillNTupleFields("pr_yield", helicitypattern.GetPairYield());
+	    burstrootfile->FillNTupleFields("pr_asym", helicitypattern.GetPairAsymmetry());
+	    burstrootfile->FillNTuple("pr_yield");
+	    burstrootfile->FillNTuple("pr_asym");
 #endif
-	    
+
 	    // Clear the data
 	    helicitypattern.ClearPairData();
 	  }
@@ -440,10 +430,8 @@ Int_t main(Int_t argc, Char_t* argv[])
 
               // Fill helicity RNTuple if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-              if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-                treerootfile->FillNTupleFields(helicitypattern);
-                treerootfile->FillNTuple("mul");
-              }
+              treerootfile->FillNTupleFields(helicitypattern);
+              treerootfile->FillNTuple("mul");
 #endif
 
               // Process data handlers
@@ -458,9 +446,7 @@ Int_t main(Int_t argc, Char_t* argv[])
 
               // Fill data handler RNTuple fields if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-              if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-                datahandlerarray_mul.FillNTupleFields(treerootfile);
-              }
+              datahandlerarray_mul.FillNTupleFields(treerootfile);
 #endif
 
               // Fill the pattern into the sum for this burst
@@ -493,10 +479,8 @@ Int_t main(Int_t argc, Char_t* argv[])
 
                 // Fill burst RNTuple if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-                if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-                  burstrootfile->FillNTupleFields(patternsum_per_burst);
-                  burstrootfile->FillNTuple("burst");
-                }
+                burstrootfile->FillNTupleFields(patternsum_per_burst);
+                burstrootfile->FillNTuple("burst");
 #endif
 
                 // Finish data handler for burst
@@ -510,9 +494,7 @@ Int_t main(Int_t argc, Char_t* argv[])
 
                 // Fill data handler RNTuple fields if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-                if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-                  datahandlerarray_burst.FillNTupleFields(burstrootfile);
-                }
+                datahandlerarray_burst.FillNTupleFields(burstrootfile);
 #endif
 
 		helicitypattern.IncrementBurstCounter();
@@ -533,7 +515,7 @@ Int_t main(Int_t argc, Char_t* argv[])
       } // detectors.ApplySingleEventCuts()
 
     } // end of loop over events
-    
+
     // Unwind event ring
     QwMessage << "Unwinding event ring" << QwLog::endl;
     eventring.Unwind();
@@ -568,15 +550,13 @@ Int_t main(Int_t argc, Char_t* argv[])
       // Fill burst tree branches
       burstrootfile->FillTreeBranches(patternsum_per_burst);
       burstrootfile->FillTree("burst");
-    
+
       // Fill burst RNTuple if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-      if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-        burstrootfile->FillNTupleFields(patternsum_per_burst);
-        burstrootfile->FillNTuple("burst");
-      }
+      burstrootfile->FillNTupleFields(patternsum_per_burst);
+      burstrootfile->FillNTuple("burst");
 #endif
-    
+
       // Finish data handler for burst
       datahandlerarray_burst.FinishDataHandler();
 
@@ -588,9 +568,7 @@ Int_t main(Int_t argc, Char_t* argv[])
 
       // Fill data handler RNTuple fields if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-      if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-        datahandlerarray_burst.FillNTupleFields(burstrootfile);
-      }
+      datahandlerarray_burst.FillNTupleFields(burstrootfile);
 #endif
       patternsum_per_burst.PrintIndexMapFile(run_number);
     }
@@ -623,10 +601,8 @@ Int_t main(Int_t argc, Char_t* argv[])
 
     // Fill running sum RNTuple if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-    if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-      treerootfile->FillNTupleFields(eventsum);
-      treerootfile->FillNTuple("evts");
-    }
+    treerootfile->FillNTupleFields(eventsum);
+    treerootfile->FillNTuple("evts");
 #endif
 
     if (gQwOptions.GetValue<bool>("print-patternsum")) {
@@ -639,10 +615,8 @@ Int_t main(Int_t argc, Char_t* argv[])
 
     // Fill pattern sum RNTuple if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-    if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-      treerootfile->FillNTupleFields(patternsum);
-      treerootfile->FillNTuple("muls");
-    }
+    treerootfile->FillNTupleFields(patternsum);
+    treerootfile->FillNTuple("muls");
 #endif
 
     if (gQwOptions.GetValue<bool>("print-burstsum")) {
@@ -655,14 +629,12 @@ Int_t main(Int_t argc, Char_t* argv[])
 
     // Fill burst sum RNTuple if enabled
 #ifdef HAS_RNTUPLE_SUPPORT
-    if (gQwOptions.GetValue<bool>("enable-rntuples")) {
-      burstrootfile->FillNTupleFields(burstsum);
-      burstrootfile->FillNTuple("bursts");
-    }
+    burstrootfile->FillNTupleFields(burstsum);
+    burstrootfile->FillNTuple("bursts");
 #endif
 
     //  Construct objects
-    treerootfile->ConstructObjects("objects", helicitypattern);
+    burstrootfile->ConstructObjects("objects", helicitypattern);
 
     /*  Write to the root file, being sure to delete the old cycles  *
      *  which were written by Autosave.                              *
@@ -718,7 +690,7 @@ Int_t main(Int_t argc, Char_t* argv[])
       QwMessage << " ------------ error counters ------------------ " << QwLog::endl;
       ringoutput.PrintErrorCounters();
     }
-    
+
     if (gQwOptions.GetValue<bool>("write-promptsummary")) {
       //      runningsum.WritePromptSummary(&promptsummary, "yield");
       // runningsum.WritePromptSummary(&promptsummary, "asymmetry");
@@ -736,11 +708,10 @@ Int_t main(Int_t argc, Char_t* argv[])
       patternsum.FillDB(&database);
       patternsum.FillErrDB(&database);
       epicsevent.FillDB(&database);
-      helicitypattern.return_running_combiner().FillDB(&database,"asymmetry");
       ringoutput.FillDB_MPS(&database, "optics");
     }
-    #endif // __USE_DATABASE__    
-  
+    #endif // __USE_DATABASE__
+
     //epicsevent.WriteEPICSStringValues();
 
     //  Close event buffer stream
@@ -757,4 +728,3 @@ Int_t main(Int_t argc, Char_t* argv[])
 
   return 0;
 }
-

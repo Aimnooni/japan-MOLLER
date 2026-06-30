@@ -23,22 +23,43 @@ jobs:
             os: "el9"
             compiler: "gcc13"
             opt: "opt"
-            cxxflags: "-g -pg"
-          - release: "LCG_107"
-            arch: "x86_64"
-            os: "el9"
-            compiler: "clang16"
-            opt: "opt"
-            cxxflags: ""
+            cxxflags: "-march=x86-64-v3 -mtune=generic -g -pg"
+            submodules: true
           - release: "LCG_107"
             arch: "x86_64"
             os: "el9"
             compiler: "gcc14"
             opt: "opt"
-            cxxflags: ""
+            cxxflags: "-march=x86-64-v3 -mtune=generic"
+            submodules: true
+          - release: "LCG_108"
+            arch: "x86_64"
+            os: "el9"
+            compiler: "clang19"
+            opt: "opt"
+            cxxflags: "-march=x86-64-v3 -mtune=generic"
+            submodules: true
+          - release: "LCG_108"
+            arch: "x86_64"
+            os: "el9"
+            compiler: "gcc15"
+            opt: "opt"
+            cxxflags: "-march=x86-64-v3 -mtune=generic"
+            submodules: true
+          # Build without submodules
+          - release: "LCG_108"
+            arch: "x86_64"
+            os: "el9"
+            compiler: "gcc15"
+            opt: "dbg"
+            cxxflags: "-march=x86-64-v3 -mtune=generic"
+            submodules: false
     steps:
-      - uses: actions/checkout@v3
-      - uses: cvmfs-contrib/github-action-cvmfs@v3
+      - uses: actions/checkout@v7
+        with:
+          submodules: ${{ matrix.submodules }}  
+          fetch-depth: 0
+      - uses: cvmfs-contrib/github-action-cvmfs@v5
         with:
           cvmfs_repositories: 'sft.cern.ch,geant4.cern.ch'
       - name: Install ccache
@@ -46,13 +67,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ccache
       - name: Setup ccache cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.ccache
-          key: ccache-${{ matrix.LCG }}-${{ github.ref_name }}
+          # The matrix variable is `release` (not `LCG`); using the wrong name
+          # collapses every toolchain to the same cache key and lets gcc13
+          # objects pollute clang19/gcc15 builds, producing SIGILL at static
+          # initialization on hosts that lack the instructions the cached
+          # objects were compiled for.  Key on release+compiler+opt to keep
+          # one cache per toolchain.
+          key: ccache-${{ matrix.release }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}-${{ github.ref_name }}
           restore-keys: |
-            ccache-${{ matrix.LCG }}-
-            ccache-
+            ccache-${{ matrix.release }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}-
+            ccache-${{ matrix.release }}-${{ matrix.os }}-${{ matrix.compiler }}-
+            ccache-${{ matrix.release }}-
       - name: Configure ccache
         run: |
           ccache --set-config=cache_dir=$HOME/.ccache
@@ -60,15 +88,24 @@ jobs:
           ccache --set-config=compression=true
           ccache --zero-stats
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
-      - name: Create qwparity.conf symlink
-        run: ln -sf Parity/prminput/qwparity_simple.conf qwparity.conf
-      - uses: aidasoft/run-lcg-view@v1
+      - uses: aidasoft/run-lcg-view@v6
         with:
           release-platform: ${{ matrix.release }}/${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           run: |
+            echo "::group::Add submodules to git safe directories"
+            git config --global --add safe.directory $PWD
+            git config --global --add safe.directory $PWD/thirdparty/\* # Literal asterisk
+            git config --global --get-all safe.directory
+            echo "::endgroup"
+
             echo "::group::Dependencies"
             # Install dependencies
             PYTHONHOME="" PYTHONPATH="" dnf install -y time
+            # Sqlpp23 requires pyparsing>=3
+            pip install 'pyparsing>=3'
+            for i in $HOME/.local/lib/python* ; do
+              export PYTHONPATH=$i/site-packages:$PYTHONPATH
+            done
             echo "::endgroup::"
 
             echo "::group::Configuration"
@@ -83,69 +120,166 @@ jobs:
             SetupFiles/make_SET_ME_UP
             echo "::endgroup::"
 
-            echo "::group::Compilation"
-            # Build the project with ccache
-            cmake -Bbuild -S. -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"
-            cmake --build build -j$(nproc)
+            echo "::group::System architecture"
+            gcc -march=native -Q --help=target | grep -m1 -- '-march='
             echo "::endgroup::"
-            
+
+            echo "::group::Compilation with ccache"
+            if [[ "${{ matrix.submodules }}" == "true" ]] ; then
+              SQLPP_OPTIONS="\
+                -DBUILD_MARIADB_CONNECTOR=ON \
+                -DBUILD_MYSQL_CONNECTOR=ON \
+                -DBUILD_POSTGRESQL_CONNECTOR=ON \
+                -DBUILD_SQLITE3_CONNECTOR=ON"
+            else
+              SQLPP_OPTIONS=""
+            fi
+            cmake -Bbuild -S. \
+              -Wdev -Werror=dev \
+              ${SQLPP_OPTIONS} \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_INSTALL_PREFIX=install \
+              -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}" 2>&1 | tee cmake.txt
+            # Check the log file for unused variables
+            if grep -q "Manually-specified variables were not used" cmake.txt; then
+                echo "ERROR: Unused CMake variables detected."
+                exit 1
+            fi
+            cmake --build build -j$(nproc) --target install
+            echo "::endgroup::"
+
             echo "::group::ccache statistics"
             ccache --show-stats
             echo "::endgroup::"
 
+            # Ensure we fail even when piping output to tee
+            set -o pipefail
+
             echo "::group::Mock data generation"
             # Run the mock data generator and analysis as described in README
             source SetupFiles/SET_ME_UP.bash
-            
+
             # Generate mock data
             /usr/bin/time -v \
-            build/qwmockdatagenerator -r 4 -e 1:20000 --config qwparity_simple.conf --detectors mock_newdets.map --data .
+            build/qwmockdatagenerator -r 4 -e 1:20000 \
+              --config qwparity_simple.conf \
+              --detectors mock_newdets.map \
+              --data . | tee qwmockdataenerator.log
             echo "::endgroup::"
-            
-            echo "::group::Mock data analysis"
+
+            echo "::group::Create database (sqlite3)"
+            # Create and populate the database
+            # (sqlite3 only supports INTEGER PRIMARY KEY, not INT UNSIGNED or TINYINT UNSIGNED)
+            # (sqlite3 does not support ENUM, so convert to TEXT with CHECK)
+            sed -e 's/INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY/INTEGER PRIMARY KEY/g' \
+                -e 's/TINYINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY/INTEGER PRIMARY KEY/g' \
+                -e 's/\(\S*\)\sENUM(\([^)]*\))/\1 TEXT CHECK(\1 in (\2))/g' \
+                Parity/prminput/qwparity_schema.sql | sqlite3 qwparity.db
+            # Insert dummy schema version (compare with QwParityDB.h)
+            sqlite3 qwparity.db "INSERT INTO db_schema VALUES(0, '01','04','0000','1970-01-01 00:00:00.000','build-lcg-cvmfs.yml');"
+            # Insert dummy seed data
+            sqlite3 qwparity.db "INSERT INTO seeds VALUES(0, 0, 10, 'foo', 'bar');"
+            echo "::endgroup::"
+
+            echo "::group::Mock data analysis (sqlite3, trees)"
             # Analyze the generated mock data
+            mkdir -p trees
             /usr/bin/time -v \
-            build/qwparity -r 4 --config qwparity_simple.conf --detectors mock_newdets.map --datahandlers mock_datahandlers.map --data . --rootfiles . --write-promptsummary
+            build/qwparity -r 4 \
+              --config qwparity_simple.conf \
+              --detectors mock_newdets.map \
+              --datahandlers mock_datahandlers.map \
+              --data . \
+              --rootfiles trees/. \
+              --write-promptsummary \
+              --QwDatabase.accesslevel RW \
+              --QwDatabase.dbtype sqlite3 \
+              --QwDatabase.dbname qwparity.db | tee qwparity-trees.log
+            echo "::endgroup::"
+
+            if printf "%s\n%s" 6.36.00 $(root-config --version) | sort -V -C ; then
+              echo "::group::Mock data analysis (sqlite3, rntuples)"
+              # Analyze the generated mock data
+              mkdir -p rntuples
+              /usr/bin/time -v \
+              build/qwparity -r 4 \
+                --config qwparity_simple.conf \
+                --detectors mock_newdets.map \
+                --datahandlers mock_datahandlers.map \
+                --data . \
+                --rootfiles rntuples/. \
+                --write-promptsummary \
+                --QwDatabase.accesslevel RW \
+                --QwDatabase.dbtype sqlite3 \
+                --QwDatabase.dbname qwparity.db \
+                --enable-rntuples \
+                --disable-trees | tee qwparity-rntuples.log
+              echo "::endgroup::"
+            fi
+
+            echo "::group::Print database contents (sqlite3)"
+            # Print the database contents
+            sqlite3 qwparity.db .dump | tee qwparity-sqlite3.sql
             echo "::endgroup::"
 
             echo "::group:: Profile analysis"
             if [ -f gmon.out ] ; then
-              gprof build/qwparity | tee qwparity.txt
+              gprof build/qwparity | tee qwparity-profile.txt
             fi
             echo "::endgroup::"
 
       - name: Compress build directory
         run: tar -caf build.tar.zst build/
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: build-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}
+          name: build-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: build.tar.zst
           retention-days: 7
           if-no-files-found: error
 
-      - name: Upload profiling analysis
-        uses: actions/upload-artifact@v4
+      - name: Upload logs
+        uses: actions/upload-artifact@v7
         with:
-          name: gprof-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}
+          name: logs-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
-            qwparity.txt
+            qwmockdatagenerator.log
+            qwparity-*.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload profiling analysis
+        uses: actions/upload-artifact@v7
+        with:
+          name: gprof-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
+          path: |
+            qwparity-profile.txt
           retention-days: 7
           if-no-files-found: ignore
 
       - name: Upload prompt summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: prompt-summary-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}
+          name: prompt-summary-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
-            summary_*.txt
+            trees/summary_*.txt
+            rntuples/summary_*.txt
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload database dumps
+        uses: actions/upload-artifact@v7
+        with:
+          name: qwparity-sql-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
+          path: |
+            qwparity-*.sql
           retention-days: 7
           if-no-files-found: error
 
       - name: Upload regression alias definitions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: regalias-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}
+          name: regalias-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
             *regalias*.C
           retention-days: 7
@@ -153,28 +287,28 @@ jobs:
 
       - name: Download target branch artifacts (prompt summary)
         if: github.event_name == 'pull_request'
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: build-lcg-cvmfs.yml
           branch: ${{ github.event.pull_request.base.ref }}
-          name: prompt-summary-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}
+          name: prompt-summary-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: ./target
           if_no_artifact_found: warn
 
       - name: Download target branch artifacts (regalias)
         if: github.event_name == 'pull_request'
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: build-lcg-cvmfs.yml
           branch: ${{ github.event.pull_request.base.ref }}
-          name: regalias-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}
+          name: regalias-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: ./target
           if_no_artifact_found: warn
 
       - name: Compare artifacts
         if: github.event_name == 'pull_request'
         run: |
-          echo "Comparing artifacts for ${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}"
+          echo "Comparing artifacts for ${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}"
 
           # Check if target artifacts exist
           if [ ! -d "./target" ] || [ -z "$(ls -A ./target)" ]; then
@@ -184,7 +318,7 @@ jobs:
           fi
 
           # Find summary files in both directories
-          current_files=$(find ./ -maxdepth 1 -name "summary_*.txt" -o -name "*regalias*.C" | sort)
+          current_files=$(find ./ ./trees ./rntuples -maxdepth 1 -name "summary_*.txt" -o -name "*regalias*.C" | sort)
           target_files=$(find ./target -name "summary_*.txt" -o -name "*regalias*.C" | sort)
 
           echo "Current files found:"
@@ -196,27 +330,31 @@ jobs:
           comparison_failed=false
           for current_file in $current_files; do
             filename=$(basename "$current_file")
-            target_file="./target/$filename"
+            if [ -f ./target/$current_file ]; then
+              target_file="./target/$current_file"
+            else
+              target_file="./target/$filename"
+            fi
 
             if [ ! -f "$target_file" ]; then
-              echo "❌ Target file $filename not found"
+              echo "❌ Target file $current_file not found"
               comparison_failed=true
               continue
             fi
 
-            echo "Comparing $filename..."
+            echo "Comparing $current_file..."
 
             # Skip lines containing timestamps and metadata that can vary
             if diff -q <(grep -v "Start Time:\|End Time:" "$current_file") <(grep -v "Start Time:\|End Time:" "$target_file") > /dev/null; then
-              echo "✅ $filename: No meaningful differences found"
+              echo "✅ $current_file: No meaningful differences found"
             else
-              echo "❌ $filename: Differences found beyond timestamps"
+              echo "❌ $current_file: Differences found beyond timestamps"
               echo "--- Expected (target branch) ---"
-              grep -v "Start Time:\|End Time:" "$target_file" | head -20
+              grep -v "Start Time:\|End Time:" "$target_file" | cat
               echo "--- Actual (current PR) ---"
-              grep -v "Start Time:\|End Time:" "$current_file" | head -20
+              grep -v "Start Time:\|End Time:" "$current_file" | cat
               echo "--- Detailed diff ---"
-              diff -u <(grep -v "Start Time:\|End Time:" "$target_file") <(grep -v "Start Time:\|End Time:" "$current_file") | head -50
+              diff -u <(grep -v "Start Time:\|End Time:" "$target_file") <(grep -v "Start Time:\|End Time:" "$current_file") | cat
               comparison_failed=true
             fi
           done
@@ -232,7 +370,6 @@ jobs:
   valgrind:
     runs-on: ubuntu-latest
     needs: linux
-    if: github.event_name == 'pull_request'
     strategy:
       fail-fast: false
       matrix:
@@ -244,23 +381,30 @@ jobs:
             opt: "opt"
             cxxflags: ""
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
-          name: build-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}
+          name: build-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: .
       - name: Uncompress build artifact
         run: tar -xaf build.tar.zst
 
-      - uses: cvmfs-contrib/github-action-cvmfs@v3
+      - uses: cvmfs-contrib/github-action-cvmfs@v5
         with:
           cvmfs_repositories: 'sft.cern.ch,geant4.cern.ch'
-      - uses: aidasoft/run-lcg-view@v1
+      - uses: aidasoft/run-lcg-view@v6
         with:
           release-platform: ${{ matrix.release }}/${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           run: |
+            echo "::group::System architecture"
+            gcc -march=native -Q --help=target | grep -m1 -- '-march='
+            echo "::endgroup::"
+
+            # Ensure we fail even when piping output to tee
+            set -o pipefail
+
             echo "::group::Mock data generation"
             build/qwmockdatagenerator -r 4 -e 1:20000 --config qwparity_simple.conf --detectors mock_newdets.map --data .
             echo "::endgroup::"
@@ -268,7 +412,7 @@ jobs:
             echo "::group::Run callgrind on mock data analysis (no rntuples, no trees, no hists)"
             valgrind --tool=callgrind --callgrind-out-file=callgrind.out.no-out --instr-atstart=no \
               build/qwparity -r 4 --config qwparity_simple.conf --detectors mock_newdets.map --datahandlers mock_datahandlers.map --data . --rootfiles . --write-promptsummary --callgrind-instr-start-event-loop \
-                --disable-trees --disable-hists
+                --disable-trees --disable-histos
             echo "::endgroup::"
 
             echo "::group::Annotate callgrind info on source code (no rntuples, no trees, no hists)"
@@ -301,9 +445,9 @@ jobs:
             echo "::endgroup::"
 
       - name: Upload callgrind analysis
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: callgrind-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}
+          name: callgrind-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
             callgrind*.txt
           retention-days: 7
