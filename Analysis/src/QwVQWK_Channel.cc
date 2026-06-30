@@ -760,7 +760,7 @@ void  QwVQWK_Channel::ConstructBranchAndVector(TTree *tree, TString &prefix, QwR
   bSequence_number = gQwHists.MatchVQWKElementFromList(GetSubsystemName().Data(), GetModuleType().Data(), "sequence_number");
 
   if (bHw_sum) {
-    values.push_back("hw_sum", 'I');
+    values.push_back("hw_sum", 'D');
     if (fDataToSave == kMoments) {
       values.push_back("hw_sum_m2", 'D');
       values.push_back("hw_sum_err", 'D');
@@ -775,7 +775,7 @@ void  QwVQWK_Channel::ConstructBranchAndVector(TTree *tree, TString &prefix, QwR
   }
 
   if (bNum_samples) {
-    values.push_back("num_samples", 'I');
+    values.push_back("num_samples", 'i');
   }
 
   if (bDevice_Error_Code) {
@@ -930,11 +930,11 @@ void  QwVQWK_Channel::ConstructNTupleAndVector(std::unique_ptr<ROOT::RNTupleMode
   TString basename = prefix(0, (prefix.First("|") >= 0)? prefix.First("|"): prefix.Length()) + GetElementName();
   fTreeArrayIndex  = values.size();
 
-  // For derived data (yield_, asym_, diff_), only store the main value to match TTree format
+  // For derived data (yield_, asym_, diff_), store with _hw_sum suffix for consistency
   if (fDataToSave == kDerived) {
-    // Only store the main hardware sum value, just like the original tree
+    // Store the main hardware sum value with explicit _hw_sum suffix
     values.push_back(0.0);
-    auto field = model->MakeField<Double_t>(basename.Data());
+    auto field = model->MakeField<Double_t>((basename + "_hw_sum").Data());
     fieldPtrs.push_back(field);
     fTreeArrayNumEntries = 1;
     return;

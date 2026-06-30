@@ -98,10 +98,16 @@ QwRootFile::QwRootFile(const TString& run_label)
     }
     QwMessage << "Opening file with RECREATE mode: " << rootfilename << QwLog::endl;
     QwMessage << "QwRootFile constructor called for: " << rootfilename << QwLog::endl;
-    fRootFile = new TFile(rootfilename.Data(), "RECREATE", "myfile1");
-    if (! fRootFile) {
+    // Use TFile::Open instead of `new TFile(...)` so the ROOT plug-in manager
+    // can dispatch remote URLs (e.g. root://host/path) to TNetXNGFile etc.
+    // The TFile(name, opt, title) constructor refuses remote paths and returns
+    // a half-built object, which then segfaults at first use.
+    fRootFile = TFile::Open(rootfilename.Data(), "RECREATE", "myfile1");
+    if (!fRootFile || fRootFile->IsZombie()) {
       QwError << "ROOT file " << rootfilename
               << " could not be opened!" << QwLog::endl;
+      delete fRootFile;
+      fRootFile = nullptr;
       return;
     } else {
       QwMessage << "Opened "<< (fUseTemporaryFile?"temporary ":"")
@@ -322,6 +328,18 @@ void QwRootFile::ProcessOptions(QwOptions &options)
 #ifdef HAS_RNTUPLE_SUPPORT
   // Option 'enable-rntuples' to enable RNTuple output
   fEnableRNTuples = options.GetValue<bool>("enable-rntuples");
+  // RNTuples require a TFile (RNTupleWriter::Append takes a TDirectory&);
+  // they cannot be hosted by a TMapFile.  If both flags are requested,
+  // disable RNTuples and warn loudly so the run does not crash later in
+  // QwRootNTuple::InitializeWriter with a null TFile*.
+  if (fEnableMapFile && fEnableRNTuples) {
+    QwMessage << QwLog::endl;
+    QwWarning << "QwRootFile::ProcessOptions:  "
+              << "RNTuple output is not supported alongside --enable-mapfile "
+                 "(TMapFile is not a TDirectory). Disabling RNTuples."
+              << QwLog::endl;
+    fEnableRNTuples = false;
+  }
 #endif // HAS_RNTUPLE_SUPPORT
 
   // Options 'disable-trees' and 'disable-histos' for disabling
@@ -330,6 +348,59 @@ void QwRootFile::ProcessOptions(QwOptions &options)
   std::for_each(v.begin(), v.end(), [&](const std::string& s){ this->DisableTree(s); });
   if (options.GetValue<bool>("disable-trees"))  DisableTree(".*");
   if (options.GetValue<bool>("disable-histos")) DisableHisto(".*");
+
+  // Read --circular-buffer up front so the mapfile-mode logic below can use
+  // it (the original ProcessOptions read it further down, but we now need
+  // it during the mapfile-tree decision).
+  fCircularBufferSize = options.GetValue<int>("circular-buffer");
+
+  // TMapFile-mode tree publishing.
+  //
+  // TTrees can be published into the mapfile: TDirectoryFile::Append
+  // auto-calls TMapFile::Add() when the directory's mother is a TMapFile,
+  // so a TTree created while gDirectory == fMapFile->GetDirectory()
+  // becomes a TMapRec on its own.  TMapFile::Update() then re-streams the
+  // tree (header + baskets) into the 1 GiB mmap on every interval.
+  //
+  // The hazard is that an unbounded TTree's serialized size grows
+  // monotonically and CustomReAlloc2 aborts as soon as it overruns the
+  // mmap.  TTree::SetCircular(N) caps the in-memory entry count, which
+  // caps the serialized size.  Require a non-zero circular buffer in
+  // mapfile mode; if the user did not pass one, force a safe default
+  // and warn loudly rather than silently dropping all trees.
+  if (fEnableMapFile && fCircularBufferSize == 0) {
+    const UInt_t kMapFileCircularDefault = 100;
+    QwMessage << QwLog::endl;
+    QwWarning << "QwRootFile::ProcessOptions:  "
+              << "--enable-mapfile requires a bounded TTree to avoid "
+                 "overrunning the " << (kMaxMapFileSize >> 20)
+              << " MiB mmap region.  "
+                 "Forcing --circular-buffer=" << kMapFileCircularDefault
+              << " (pass --circular-buffer=N to override; pass "
+                 "--disable-trees to suppress tree output entirely)."
+              << QwLog::endl;
+    fCircularBufferSize = kMapFileCircularDefault;
+  }
+
+#ifdef HAS_RNTUPLE_SUPPORT
+  // TTree and RNTuple writers share per-channel state (fTreeArrayIndex,
+  // fTreeArrayNumEntries, fDataToSave, b* flags). When both are active,
+  // the second Construct*AndVector() call clobbers the first writer's
+  // layout, and subsequent Fill*Vector() then walks a vector whose entry
+  // types no longer match what was pushed (e.g. SetValue throws
+  // "entry type 'D' cannot store unsigned int value 'block2'").
+  // Until per-writer layout state is added, make the two writers
+  // mutually exclusive: keep RNTuples and silence TTrees.
+  if (fEnableRNTuples) {
+    QwMessage << QwLog::endl;
+    QwMessage << "QwRootFile::ProcessOptions:  "
+              << "--enable-rntuples is set; disabling tree output "
+                 "(channels share layout state between TTree and RNTuple "
+                 "writers, so the two cannot be produced in the same run)."
+              << QwLog::endl;
+    DisableTree(".*");
+  }
+#endif // HAS_RNTUPLE_SUPPORT
 
   // Options 'disable-mps' and 'disable-hel' for disabling
   // helicity window and helicity pattern output
@@ -347,7 +418,6 @@ void QwRootFile::ProcessOptions(QwOptions &options)
   fNumHelEventsToSkip = options.GetValue<int>("num-mps-discarded-events");
 
   // Update interval for the map file
-  fCircularBufferSize = options.GetValue<int>("circular-buffer");
   fUpdateInterval = options.GetValue<int>("mapfile-update-interval");
   fCompressionAlgorithm = options.GetValue<int>("compression-algorithm");
   fCompressionLevel = options.GetValue<int>("compression-level");
