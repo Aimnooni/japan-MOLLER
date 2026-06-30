@@ -55,7 +55,7 @@ jobs:
             cxxflags: "-march=x86-64-v3 -mtune=generic"
             submodules: false
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: ${{ matrix.submodules }}  
           fetch-depth: 0
@@ -67,13 +67,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ccache
       - name: Setup ccache cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.ccache
-          key: ccache-${{ matrix.LCG }}-${{ github.ref_name }}
+          # The matrix variable is `release` (not `LCG`); using the wrong name
+          # collapses every toolchain to the same cache key and lets gcc13
+          # objects pollute clang19/gcc15 builds, producing SIGILL at static
+          # initialization on hosts that lack the instructions the cached
+          # objects were compiled for.  Key on release+compiler+opt to keep
+          # one cache per toolchain.
+          key: ccache-${{ matrix.release }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}-${{ github.ref_name }}
           restore-keys: |
-            ccache-${{ matrix.LCG }}-
-            ccache-
+            ccache-${{ matrix.release }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}-
+            ccache-${{ matrix.release }}-${{ matrix.os }}-${{ matrix.compiler }}-
+            ccache-${{ matrix.release }}-
       - name: Configure ccache
         run: |
           ccache --set-config=cache_dir=$HOME/.ccache
@@ -81,7 +88,7 @@ jobs:
           ccache --set-config=compression=true
           ccache --zero-stats
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
-      - uses: aidasoft/run-lcg-view@v5
+      - uses: aidasoft/run-lcg-view@v6
         with:
           release-platform: ${{ matrix.release }}/${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           run: |
@@ -224,7 +231,7 @@ jobs:
       - name: Compress build directory
         run: tar -caf build.tar.zst build/
       - name: Upload build artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: build.tar.zst
@@ -232,7 +239,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload logs
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: logs-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
@@ -242,7 +249,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload profiling analysis
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: gprof-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
@@ -251,7 +258,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload prompt summary
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: prompt-summary-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
@@ -261,7 +268,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload database dumps
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: qwparity-sql-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
@@ -270,7 +277,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload regression alias definitions
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: regalias-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
@@ -280,7 +287,7 @@ jobs:
 
       - name: Download target branch artifacts (prompt summary)
         if: github.event_name == 'pull_request'
-        uses: dawidd6/action-download-artifact@v14
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: build-lcg-cvmfs.yml
           branch: ${{ github.event.pull_request.base.ref }}
@@ -290,7 +297,7 @@ jobs:
 
       - name: Download target branch artifacts (regalias)
         if: github.event_name == 'pull_request'
-        uses: dawidd6/action-download-artifact@v14
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: build-lcg-cvmfs.yml
           branch: ${{ github.event.pull_request.base.ref }}
@@ -374,10 +381,10 @@ jobs:
             opt: "opt"
             cxxflags: ""
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download build artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: build-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: .
@@ -387,7 +394,7 @@ jobs:
       - uses: cvmfs-contrib/github-action-cvmfs@v5
         with:
           cvmfs_repositories: 'sft.cern.ch,geant4.cern.ch'
-      - uses: aidasoft/run-lcg-view@v5
+      - uses: aidasoft/run-lcg-view@v6
         with:
           release-platform: ${{ matrix.release }}/${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           run: |
@@ -438,7 +445,7 @@ jobs:
             echo "::endgroup::"
 
       - name: Upload callgrind analysis
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: callgrind-${{ matrix.release }}-${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.opt }}
           path: |
