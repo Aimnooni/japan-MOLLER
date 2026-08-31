@@ -106,8 +106,8 @@ void QwHelicityDecoder::ProcessOptions(QwOptions &options)
 
   if (options.HasValue("helicity.bitpattern")) {
     QwMessage << " Helicity Pattern ="
-	      << options.GetValue<std::string>("helicity.bitpattern")
-	      << QwLog::endl;
+              << options.GetValue<std::string>("helicity.bitpattern")
+              << QwLog::endl;
     std::string hex = options.GetValue<std::string>("helicity.bitpattern");
     //UInt_t bits = QwParameterFile::GetUInt(hex);
     SetHelicityBitPattern(hex);
@@ -202,8 +202,8 @@ void  QwHelicityDecoder::ProcessEvent()
   if((fEventNumberFirst!=-1) && (fEventNumber!=(fEventNumberOld+1))){
     Int_t nummissed(fEventNumber - (fEventNumberOld+1));
     QwError << "QwHelicityDecoder::ProcessEvent read event# ("
-	    << fEventNumber << ") is not  old_event#+1; missed "
-	    << nummissed << " gates" << QwLog::endl;
+            << fEventNumber << ") is not  old_event#+1; missed "
+            << nummissed << " gates" << QwLog::endl;
     fNumMissedGates += nummissed;
     fNumMissedEventBlocks++;
   }
@@ -256,20 +256,20 @@ void QwHelicityDecoder::EncodeEventData(std::vector<UInt_t> &buffer)
 void QwHelicityDecoder::Print() const
 {
   QwOut << "===========================\n"
-	<< "This event: Event#, Pattern#, PatternPhase#="
-	<< fEventNumber << ", "
-	<< fPatternNumber << ", "
-	<< fPatternPhaseNumber << QwLog::endl;
+        << "This event: Event#, Pattern#, PatternPhase#="
+        << fEventNumber << ", "
+        << fPatternNumber << ", "
+        << fPatternPhaseNumber << QwLog::endl;
   QwOut << "Previous event: Event#, Pattern#, PatternPhase#="
-	<< fEventNumberOld << ", "
-	<< fPatternNumberOld << ", "
-	<< fPatternPhaseNumberOld << QwLog::endl;
+        << fEventNumberOld << ", "
+        << fPatternNumberOld << ", "
+        << fPatternPhaseNumberOld << QwLog::endl;
   QwOut << "delta = \n(fEventNumberOld)-(fMaxPatternPhase)x(fPatternNumberOld)-(fPatternPhaseNumberOld)= "
-	<< ((fEventNumberOld)-(fMaxPatternPhase)*(fPatternNumberOld)-(fPatternPhaseNumberOld)) << QwLog::endl;
+        << ((fEventNumberOld)-(fMaxPatternPhase)*(fPatternNumberOld)-(fPatternPhaseNumberOld)) << QwLog::endl;
   QwOut << "Helicity Reported, Delayed, Actual ="
-	<< fHelicityReported << ","
-	<< fHelicityDelayed << ","
-	<< fHelicityActual << QwLog::endl;
+        << fHelicityReported << ","
+        << fHelicityDelayed << ","
+        << fHelicityActual << QwLog::endl;
   QwOut << "===" << QwLog::endl;
   return;
 }
@@ -361,176 +361,177 @@ Int_t QwHelicityDecoder::ProcessEvBuffer(UInt_t event_type, const ROCID_t roc_id
 
       data = buffer[i];
       if(decoder_index)             /* decoder type data word - set by decoder header word */
-	{
-	  type = 16;        /*  set decoder data words as type 16 */
-	  new_type = 0;
-	  if(decoder_index < num_decoder_words)
-	    {
-	      FillHDVariables(data, decoder_index - 1);
-	      if(lkDEBUG)
-		printf("%8X - decoder data(%d) = %d\n", data, (decoder_index - 1),
-		       data);
-	      decoder_index++;
-	    }
-	  else                      /* last decoder word */
+        {
+          type = 16;        /*  set decoder data words as type 16 */
+          new_type = 0;
+          if(decoder_index < num_decoder_words)
+            {
+              FillHDVariables(data, decoder_index - 1);
+              if(lkDEBUG)
+                printf("%8X - decoder data(%d) = %d\n", data, (decoder_index - 1),
+                       data);
+              decoder_index++;
+            }
+          else                      /* last decoder word */
 
-	    {
-	      FillHDVariables(data, decoder_index - 1);
-	      if(lkDEBUG)
-		printf("%8X - decoder data(%d) = %d\n", data, (decoder_index - 1),
-		       data);
-	      decoder_index = 0;
-	      num_decoder_words = 1;
-	    }
-	}
+            {
+              FillHDVariables(data, decoder_index - 1);
+              if(lkDEBUG)
+                printf("%8X - decoder data(%d) = %d\n", data, (decoder_index - 1),
+                       data);
+              decoder_index = 0;
+              num_decoder_words = 1;
+            }
+        }
       else                          /* normal typed word */
-	{
-	  if(data & 0x80000000)     /* data type defining word */
-	    {
-	      new_type = 1;
-	      type = (data & 0x78000000) >> 27;
-	    }
-	  else                      /* data type continuation word */
-	    {
-	      new_type = 0;
-	      type = type_last;
-	    }
 
-	  switch (type)
-	    {
-	    case 0:         /* BLOCK HEADER */
-	      slot_id_hd = (data & 0x7C00000) >> 22;
-	      mod_id_hd = (data & 0x3C0000) >> 18;
-	      n_evts = (data & 0x000FF);
-	      blk_num = (data & 0x3FF00) >> 8;
-	      if(lkDEBUG)
-		printf
-		  ("%8X - BLOCK HEADER - slot = %d  id = %d  n_evts = %d  n_blk = %d\n",
-		   data, slot_id_hd, mod_id_hd, n_evts,
-		   blk_num);
-	      break;
+        {
+          if(data & 0x80000000)     /* data type defining word */
+            {
+              new_type = 1;
+              type = (data & 0x78000000) >> 27;
+            }
+          else                      /* data type continuation word */
+            {
+              new_type = 0;
+              type = type_last;
+            }
 
-	    case 1:         /* BLOCK TRAILER */
-	      slot_id_tr = (data & 0x7C00000) >> 22;
-	      n_words = (data & 0x3FFFFF);
-	      if(lkDEBUG)
-		printf("%8X - BLOCK TRAILER - slot = %d   n_words = %d\n",
-		       data, slot_id_tr, n_words);
-	      break;
+          switch (type)
+            {
+            case 0:         /* BLOCK HEADER */
+              slot_id_hd = (data & 0x7C00000) >> 22;
+              mod_id_hd = (data & 0x3C0000) >> 18;
+              n_evts = (data & 0x000FF);
+              blk_num = (data & 0x3FF00) >> 8;
+              if(lkDEBUG)
+                printf
+                  ("%8X - BLOCK HEADER - slot = %d  id = %d  n_evts = %d  n_blk = %d\n",
+                   data, slot_id_hd, mod_id_hd, n_evts,
+                   blk_num);
+              break;
 
-	    case 2:         /* EVENT HEADER */
-	      if(new_type)
-		{
-		  slot_id_ev_hd = (data & 0x07C00000) >> 22;
-		  evt_num_1 = (data & 0x00000FFF);
-		  trig_time = (data & 0x003FF000) >> 12;
-		  if(lkDEBUG)
-		    printf
-		      ("%8X - EVENT HEADER - slot = %d  evt_num = %d  trig_time = %d (%X)\n",
-		       data, slot_id_ev_hd, evt_num_1, trig_time,
-		       trig_time);
-		}
-	      break;
+            case 1:         /* BLOCK TRAILER */
+              slot_id_tr = (data & 0x7C00000) >> 22;
+              n_words = (data & 0x3FFFFF);
+              if(lkDEBUG)
+                printf("%8X - BLOCK TRAILER - slot = %d   n_words = %d\n",
+                       data, slot_id_tr, n_words);
+              break;
 
-	    case 3:         /* TRIGGER TIME */
+            case 2:         /* EVENT HEADER */
+              if(new_type)
+                {
+                  slot_id_ev_hd = (data & 0x07C00000) >> 22;
+                  evt_num_1 = (data & 0x00000FFF);
+                  trig_time = (data & 0x003FF000) >> 12;
+                  if(lkDEBUG)
+                    printf
+                      ("%8X - EVENT HEADER - slot = %d  evt_num = %d  trig_time = %d (%X)\n",
+                       data, slot_id_ev_hd, evt_num_1, trig_time,
+                       trig_time);
+                }
+              break;
 
-	      if(new_type)
-		{
-		  time_1 = (data & 0x7FFFFFF);
-		  if(lkDEBUG)
-		    printf("%8X - TRIGGER TIME 1 - time = %X\n", data,
-			   time_1);
-		  time_now = 1;
-		  time_last = 1;
-		}
-	      else
-		{
-		  if(time_last == 1)
-		    {
-		      time_2 = (data & 0xFFFFF);
-		      if(lkDEBUG)
-			printf("%8X - TRIGGER TIME 2 - time = %X\n", data,
-			       time_2);
-		      time_now = 2;
-		    }
-		  else if(lkDEBUG)
-		    printf("%8X - TRIGGER TIME - (ERROR)\n", data);
+            case 3:         /* TRIGGER TIME */
 
-		  time_last = time_now;
-		}
+              if(new_type)
+                {
+                  time_1 = (data & 0x7FFFFFF);
+                  if(lkDEBUG)
+                    printf("%8X - TRIGGER TIME 1 - time = %X\n", data,
+                           time_1);
+                  time_now = 1;
+                  time_last = 1;
+                }
+              else
+                {
+                  if(time_last == 1)
+                    {
+                      time_2 = (data & 0xFFFFF);
+                      if(lkDEBUG)
+                        printf("%8X - TRIGGER TIME 2 - time = %X\n", data,
+                               time_2);
+                      time_now = 2;
+                    }
+                  else if(lkDEBUG)
+                    printf("%8X - TRIGGER TIME - (ERROR)\n", data);
+
+                  time_last = time_now;
+                }
           break;
 
-	    case 4:         /* UNDEFINED TYPE */
-	      if(lkDEBUG)
-		printf("%8X - UNDEFINED TYPE = %d\n", data, type);
-	      break;
+            case 4:         /* UNDEFINED TYPE */
+              if(lkDEBUG)
+                printf("%8X - UNDEFINED TYPE = %d\n", data, type);
+              break;
 
-	    case 5:         /* UNDEFINED TYPE */
-	      if(lkDEBUG)
-		printf("%8X - UNDEFINED TYPE = %d\n", data, type);
-	      break;
+            case 5:         /* UNDEFINED TYPE */
+              if(lkDEBUG)
+                printf("%8X - UNDEFINED TYPE = %d\n", data, type);
+              break;
 
-	    case 6:         /* UNDEFINED TYPE */
-	      if(lkDEBUG)
-		printf("%8X - UNDEFINED TYPE = %d\n", data, type);
-	      break;
+            case 6:         /* UNDEFINED TYPE */
+              if(lkDEBUG)
+                printf("%8X - UNDEFINED TYPE = %d\n", data, type);
+              break;
 
-	    case 7:         /* UNDEFINED TYPE */
-	      if(lkDEBUG)
-		printf("%8X - UNDEFINED TYPE = %d\n", data, type);
-	      break;
+            case 7:         /* UNDEFINED TYPE */
+              if(lkDEBUG)
+                printf("%8X - UNDEFINED TYPE = %d\n", data, type);
+              break;
 
-	    case 8:         /* DECODER HEADER */
-	      num_decoder_words = (data & 0x3F);    /* number of decoder words to follow */
-	      decoder_index = 1;    /* identify next word as a decoder data word */
-	      if(lkDEBUG)
-		printf("%8X - DECODER HEADER = %d  (NUM DECODER WORDS = %d)\n",
-		       data, type, num_decoder_words);
-	      break;
+            case 8:         /* DECODER HEADER */
+              num_decoder_words = (data & 0x3F);    /* number of decoder words to follow */
+              decoder_index = 1;    /* identify next word as a decoder data word */
+              if(lkDEBUG)
+                printf("%8X - DECODER HEADER = %d  (NUM DECODER WORDS = %d)\n",
+                       data, type, num_decoder_words);
+              break;
 
-	    case 9:         /* UNDEFINED TYPE */
-	      if(lkDEBUG)
-		printf("%8X - UNDEFINED TYPE = %d\n", data, type);
-	      break;
+            case 9:         /* UNDEFINED TYPE */
+              if(lkDEBUG)
+                printf("%8X - UNDEFINED TYPE = %d\n", data, type);
+              break;
 
-	    case 10:                /* UNDEFINED TYPE */
-	      if(lkDEBUG)
-		printf("%8X - UNDEFINED TYPE = %d\n", data, type);
-	      break;
+            case 10:                /* UNDEFINED TYPE */
+              if(lkDEBUG)
+                printf("%8X - UNDEFINED TYPE = %d\n", data, type);
+              break;
 
-	    case 11:                /* UNDEFINED TYPE */
-	      if(lkDEBUG)
-		printf("%8X - UNDEFINED TYPE = %d\n", data, type);
-	      break;
+            case 11:                /* UNDEFINED TYPE */
+              if(lkDEBUG)
+                printf("%8X - UNDEFINED TYPE = %d\n", data, type);
+              break;
 
-	    case 12:                /* UNDEFINED TYPE */
-	      if(lkDEBUG)
-		printf("%8X - UNDEFINED TYPE = %d\n", data, type);
-	      break;
+            case 12:                /* UNDEFINED TYPE */
+              if(lkDEBUG)
+                printf("%8X - UNDEFINED TYPE = %d\n", data, type);
+              break;
 
-	    case 13:                /* END OF EVENT */
-	      if(lkDEBUG)
-		printf("%8X - END OF EVENT = %d\n", data, type);
-	      break;
+            case 13:                /* END OF EVENT */
+              if(lkDEBUG)
+                printf("%8X - END OF EVENT = %d\n", data, type);
+              break;
 
-	    case 14:                /* DATA NOT VALID (no data available) */
-	      slot_id_dnv = (data & 0x7C00000) >> 22;
-	      if(lkDEBUG)
-		printf("%8X - DATA NOT VALID = %d  slot = %d\n", data,
-		       type, slot_id_dnv);
-	      break;
+            case 14:                /* DATA NOT VALID (no data available) */
+              slot_id_dnv = (data & 0x7C00000) >> 22;
+              if(lkDEBUG)
+                printf("%8X - DATA NOT VALID = %d  slot = %d\n", data,
+                       type, slot_id_dnv);
+              break;
 
-	    case 15:                /* FILLER WORD */
-	      slot_id_fill = (data & 0x7C00000) >> 22;
-	      if(lkDEBUG)
-		printf("%8X - FILLER WORD = %d  slot = %d\n", data, type,
-		       slot_id_fill);
-	      break;
-	    }
+            case 15:                /* FILLER WORD */
+              slot_id_fill = (data & 0x7C00000) >> 22;
+              if(lkDEBUG)
+                printf("%8X - FILLER WORD = %d  slot = %d\n", data, type,
+                       slot_id_fill);
+              break;
+            }
 
-	  type_last = type; /* save type of current data word */
+          type_last = type; /* save type of current data word */
 
-	}
+        }
     }
   }
   return 0;
@@ -997,7 +998,7 @@ void  QwHelicityDecoder::FillTreeVector(QwRootTreeBranchVector &values) const
       values.SetValue(index++, fLast_Duration_TSettle);
 
       for (size_t i=0; i<fWord.size(); i++)
-	values.SetValue(index++, fWord[i].fValue);
+        values.SetValue(index++, fWord[i].fValue);
     }
   else if(fHistoType==kHelSavePattern)
     {
@@ -1008,7 +1009,7 @@ void  QwHelicityDecoder::FillTreeVector(QwRootTreeBranchVector &values) const
       values.SetValue(index++, fPatternNumber);
       values.SetValue(index++, fPatternSeed);
       for (size_t i=0; i<fWord.size(); i++){
-	values.SetValue(index++, fWord[i].fValue);
+        values.SetValue(index++, fWord[i].fValue);
       }
     }
 
@@ -1020,8 +1021,8 @@ void QwHelicityDecoder::RunPredictor()
   Int_t ldebug = kFALSE;
 
   if(ldebug)  std::cout  << "Entering QwHelicityDecoder::RunPredictor for fEventNumber, " << fEventNumber
-			 << ", fPatternNumber, " << fPatternNumber
-			 <<  ", and fPatternPhaseNumber, " << fPatternPhaseNumber << std::endl;
+                         << ", fPatternNumber, " << fPatternNumber
+                         <<  ", and fPatternPhaseNumber, " << fPatternPhaseNumber << std::endl;
 
     /**Update the random seed if the new event is from a different pattern.
        Check the difference between old pattern number and the new one and
@@ -1031,23 +1032,24 @@ void QwHelicityDecoder::RunPredictor()
       if((fPatternPhaseNumber==fMinPatternPhase)&& (fPatternNumber>=0)) {
         iseed_Delayed = fSeed_Reported & 0x7fffffff;
 
-	/** set the polarity of the current pattern to be equal to the reported helicity,*/
-	fDelayedPatternPolarity = fHelicityReported;
-	QwDebug << "QwHelicityDecoder:: CollectRandBits30:  delayedpatternpolarity =" << fDelayedPatternPolarity << QwLog::endl;
+        /** set the polarity of the current pattern to be equal to the reported helicity,*/
+        fDelayedPatternPolarity = fHelicityReported;
+        QwDebug << "QwHelicityDecoder:: CollectRandBits30:  delayedpatternpolarity =" << fDelayedPatternPolarity << QwLog::endl;
 
-	/** then use it as the delayed helicity, */
-	fHelicityDelayed = fDelayedPatternPolarity;
+        /** then use it as the delayed helicity, */
+        fHelicityDelayed = fDelayedPatternPolarity;
 
-	/**if the helicity is delayed by a positive number of patterns then loop the delayed ranseed backward to get the ranseed
-	   for the actual helicity */
-	if(fHelicityDelay >=0){
-	  iseed_Actual = iseed_Delayed;
-	  for(Int_t i=0; i<fHelicityDelay; i++) {
-	    /**, get the pattern polarity for the actual pattern using that actual ranseed.*/
-	    fPreviousPatternPolarity = fActualPatternPolarity;
-	    fActualPatternPolarity = GetRandbit30(iseed_Actual);
-	  }
-	}
+
+        /**if the helicity is delayed by a positive number of patterns then loop the delayed ranseed backward to get the ranseed
+           for the actual helicity */
+        if(fHelicityDelay >=0){
+          iseed_Actual = iseed_Delayed;
+          for(Int_t i=0; i<fHelicityDelay; i++) {
+            /**, get the pattern polarity for the actual pattern using that actual ranseed.*/
+            fPreviousPatternPolarity = fActualPatternPolarity;
+            fActualPatternPolarity = GetRandbit30(iseed_Actual);
+          }
+        }
      }
     fHelicityActual  = fActualPatternPolarity ^ fEventPolarity;
     fHelicityDelayed = fDelayedPatternPolarity ^ fEventPolarity;
@@ -1055,10 +1057,10 @@ void QwHelicityDecoder::RunPredictor()
 
   if(ldebug){
     std::cout << "Predicted Polarity ::: Delayed ="
-	      << fDelayedPatternPolarity << " Actual ="
-	      << fActualPatternPolarity << "\n";
+              << fDelayedPatternPolarity << " Actual ="
+              << fActualPatternPolarity << "\n";
     std::cout << "Predicted Helicity ::: Delayed Helicity=" << fHelicityDelayed
-	      << " Actual Helicity=" << fHelicityActual << " Reported Helicity=" << fHelicityReported << "\n";
+              << " Actual Helicity=" << fHelicityActual << " Reported Helicity=" << fHelicityReported << "\n";
     QwError << "Exiting QwHelicityDecoder::RunPredictor " << QwLog::endl;
 
   }
@@ -1090,8 +1092,8 @@ void QwHelicityDecoder::SetHelicityDelay(Int_t delay)
     fHelicityDelay = delay;
     if(delay == 0){
       QwWarning << "QwHelicityDecoder : SetHelicityDelay ::  helicity delay is set to 0."
-		<< " Disabling helicity predictor and using reported helicity information."
-		<< QwLog::endl;
+                << " Disabling helicity predictor and using reported helicity information."
+                << QwLog::endl;
       fUsePredictor = kFALSE;
     }
     else
@@ -1132,7 +1134,7 @@ VQwSubsystem&  QwHelicityDecoder::operator=  (VQwSubsystem *value)
       QwHelicityDecoder* input= dynamic_cast<QwHelicityDecoder*>(value);
 
       for(size_t i=0;i<input->fWord.size();i++)
-	this->fWord[i].fValue=input->fWord[i].fValue;
+        this->fWord[i].fValue=input->fWord[i].fValue;
       this->fHelicityActual = input->fHelicityActual;
       this->fPatternNumber  = input->fPatternNumber;
       this->fPatternSeed    = input->fPatternSeed;
@@ -1168,8 +1170,8 @@ VQwSubsystem&  QwHelicityDecoder::operator=  (VQwSubsystem *value)
       this->fNumHelicityErrors    = input->fNumHelicityErrors;
 
       if(ldebug){
-	std::cout << "QwHelicityDecoder::operator = this->fPatternNumber=" << this->fPatternNumber << std::endl;
-	std::cout << "input->fPatternNumber=" << input->fPatternNumber << "\n";
+        std::cout << "QwHelicityDecoder::operator = this->fPatternNumber=" << this->fPatternNumber << std::endl;
+        std::cout << "input->fPatternNumber=" << input->fPatternNumber << "\n";
       }
     }
 
@@ -1181,7 +1183,7 @@ VQwSubsystem&  QwHelicityDecoder::operator+=  (VQwSubsystem *value)
   //  Bool_t localdebug=kFALSE;
   QwDebug << "Entering QwHelicityDecoder::operator+= adding " << value->GetName() << " to " << this->GetName() << " " << QwLog::endl;
 
-  //this routine is most likely to be called during the computatin of assymetry
+  //this routine is most likely to be called during the computation of asymmetry
   //this call doesn't make too much sense for this class so the following lines
   //are only use to put safe gards testing for example if the two instantiation indeed
   // refers to elements in the same pattern.
@@ -1196,7 +1198,7 @@ void QwHelicityDecoder::CheckPatternNum(VQwSubsystem *value)
   if(Compare(value)) {
     QwHelicityDecoder* input= dynamic_cast<QwHelicityDecoder*>(value);
     QwDebug << "QwHelicityDecoder::MergeCounters: this->fPatternNumber=" << this->fPatternNumber
-	    << ", input->fPatternNumber=" << input->fPatternNumber << QwLog::endl;
+            << ", input->fPatternNumber=" << input->fPatternNumber << QwLog::endl;
 
     this->fErrorFlag |= input->fErrorFlag;
 
@@ -1221,7 +1223,7 @@ void QwHelicityDecoder::MergeCounters(VQwSubsystem *value)
       std::min(fEventNumber, input->fEventNumber);
     for (size_t i=0; i<fWord.size(); i++) {
       fWord[i].fValue =  (fWord[i].fValue == 0) ? input->fWord[i].fValue :
-	std::min( fWord[i].fValue, input->fWord[i].fValue);
+        std::min( fWord[i].fValue, input->fWord[i].fValue);
     }
   }
 }
